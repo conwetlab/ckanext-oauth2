@@ -10,7 +10,8 @@ from requests_oauthlib import OAuth2Session
 from webob import Request, Response
 from zope.interface import implements
 
-from ckan.model import User
+from ckan.model import User, Session
+
 
 log = logging.getLogger(__name__)
 
@@ -30,11 +31,14 @@ class OAuth2Plugin(object):
     implements(IIdentifier, IChallenger, IAuthenticator)
 
     def __init__(self, authorization_endpoint=None, token_endpoint=None, client_id=None, client_secret=None,
-                scope=None, rememberer_name=None, profile_api_url=None, profile_api_user_field=None):
+                 scope=None, rememberer_name=None, profile_api_url=None, profile_api_user_field=None,
+                 profile_api_fullname_field=None, profile_api_mail_field=None):
 
-        if not authorization_endpoint or not token_endpoint or not client_id or not client_secret:
-            raise ValueError('authorization_endpoint, token_endpoint, client_id and client_secret parameters '
-                'are required')
+        # Check that all the required fields are provided
+        if not authorization_endpoint or not token_endpoint or not client_id or not client_secret or not profile_api_user_field:
+            raise ValueError('authorization_endpoint, token_endpoint, client_id, client_secret parameters '
+                             'and profile_api_user_field are required')
+
         self.authorization_endpoint = authorization_endpoint
         self.token_endpoint = token_endpoint
         self.client_id = client_id
@@ -43,17 +47,19 @@ class OAuth2Plugin(object):
         self.rememberer_name = rememberer_name
         self.profile_api_url = profile_api_url
         self.profile_api_user_field = profile_api_user_field
+        self.profile_api_fullname_field = profile_api_fullname_field
+        self.profile_api_mail_field = profile_api_mail_field
 
     def _redirect_uri(self, request):
         return ''.join([request.host_url, self.redirect_url])
 
     def challenge(self, environ, status, app_headers=(), forget_headers=()):
-        """Challenge for OAuth2 credentials.
+        '''Challenge for OAuth2 credentials.
 
         Redirect the user through the OAuth2 login process.  Once complete
         it will post the obtained BrowserID assertion to the configured
         postback URL.
-        """
+        '''
         log.debug('Repoze OAuth challenge')
         request = Request(environ)
         state = b64encode(bytes(json.dumps({'came_from': request.url})))
@@ -77,9 +83,8 @@ class OAuth2Plugin(object):
         came_from = decoded_state.get('came_from', '/')
         oauth = OAuth2Session(self.client_id, redirect_uri=self._redirect_uri(request), scope=self.scope)
         token = oauth.fetch_token(self.token_endpoint,
-            client_secret=self.client_secret,
-            authorization_response=request.url
-        )
+                                  client_secret=self.client_secret,
+                                  authorization_response=request.url)
         return {'oauth2.token': token, 'came_from': came_from}
 
     def authenticate(self, environ, identity):
@@ -94,12 +99,27 @@ class OAuth2Plugin(object):
             user_data = profile_response.json()
             username = user_data[self.profile_api_user_field]
             user = User.by_name(username)
+
             if user is None:
-                return None
-            else:
-                identity.update({'repoze.who.userid': user.name})
-                self._redirect_from_callback(request, identity)
-                return user.name
+                # If the user does not exist, it's created
+                user = User(name=user_data[self.profile_api_user_field])
+
+            # Update fullname
+            if self.profile_api_fullname_field:
+                user.fullname = user_data[self.profile_api_fullname_field]
+
+            # Update mail
+            if self.profile_api_mail_field:
+                user.email = user_data[self.profile_api_mail_field]
+
+            # Save the user in the database
+            Session.add(user)
+            Session.commit()
+            Session.remove()
+
+            identity.update({'repoze.who.userid': user.name})
+            self._redirect_from_callback(request, identity)
+            return user.name
         return None
 
     def _get_rememberer(self, environ):
@@ -135,9 +155,9 @@ class OAuth2Plugin(object):
     def _redirect_from_callback(self, request, identity):
         '''Redirect from the callback URL after a successful authentication.'''
         if request.path == self.redirect_url:
-            came_from = identity.get(self.came_from_field)
-            if came_from is None:
-                came_from = "/"
+            # came_from = identity.get(self.came_from_field)
+            # if came_from is None:
+            came_from = "/"
             response = Response()
             response.status = 302
             response.location = came_from
