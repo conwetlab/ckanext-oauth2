@@ -44,7 +44,7 @@ setup(
     keywords='CKAN, OAuth2',
     author='Axel Haustant',
     author_email='axel.haustant@etalab2.fr',
-    url='https://github.com/etalab/ckanext-oauth2',
+    url='https://github.com/conwetlab/ckanext-oauth2',
     license='',
     packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
     namespace_packages=['ckanext'],
@@ -55,7 +55,7 @@ setup(
     ],
     entry_points={
         'ckan.plugins': [
-            'oauth2 = ckanext.oauth2.plugins:OAuth2Plugin',
+            'oauth2 = ckanext.oauth2.plugin:OAuth2Plugin',
         ]
     },
     classifiers=[

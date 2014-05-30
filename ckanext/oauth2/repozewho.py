@@ -12,7 +12,6 @@ from zope.interface import implements
 
 from ckan.model import User, Session
 
-
 log = logging.getLogger(__name__)
 
 
@@ -53,6 +52,24 @@ class OAuth2Plugin(object):
     def _redirect_uri(self, request):
         return ''.join([request.host_url, self.redirect_url])
 
+    def identify(self, environ):
+        '''Extract OAuth2 credentials from request'''
+        log.debug('Repoze OAuth identify')
+        request = Request(environ)
+
+        # Only execute this function when /oauth2/callback is called
+        if request.path != self.redirect_url:
+            return None
+
+        state = request.params.get('state')
+        decoded_state = json.loads(b64decode(state))
+        came_from = decoded_state.get(self.came_from_field, '/')
+        oauth = OAuth2Session(self.client_id, redirect_uri=self._redirect_uri(request), scope=self.scope)
+        token = oauth.fetch_token(self.token_endpoint,
+                                  client_secret=self.client_secret,
+                                  authorization_response=request.url)
+        return {'oauth2.token': token, self.came_from_field: came_from}
+
     def challenge(self, environ, status, app_headers=(), forget_headers=()):
         '''Challenge for OAuth2 credentials.
 
@@ -62,30 +79,25 @@ class OAuth2Plugin(object):
         '''
         log.debug('Repoze OAuth challenge')
         request = Request(environ)
-        state = b64encode(bytes(json.dumps({'came_from': request.url})))
-        oauth = OAuth2Session(self.client_id, redirect_uri=self._redirect_uri(request), scope=self.scope, state=state)
-        auth_url, _ = oauth.authorization_url(self.authorization_endpoint)
+
+        # Is the user logged?
+        if 'repoze.who.identity' in environ and 'repoze.who.userid' in environ['repoze.who.identity']:
+            # If the user is already logged, we mustn't try to log them again. It'll generate an infinite loop
+            location = request.headers.get('Referer', '/')
+            log.debug('User is trying to access to an Unauthorized function %r' % request.path)
+        else:
+            # Log the user in if it's not logged
+            came_from_url = request.url if not request.path.startswith('/user/login') else request.headers.get('Referer', '/')
+            state = b64encode(bytes(json.dumps({self.came_from_field: came_from_url})))
+            oauth = OAuth2Session(self.client_id, redirect_uri=self._redirect_uri(request), scope=self.scope, state=state)
+            auth_url, _ = oauth.authorization_url(self.authorization_endpoint)
+            location = auth_url
+            log.debug("Challenge: Redirecting challenge to page {0}".format(auth_url))
 
         response = Response()
         response.status = 302
-        response.location = auth_url
-        log.debug("Challenge: Redirecting challenge to page {0}".format(auth_url))
+        response.location = location
         return response
-
-    def identify(self, environ):
-        '''Extract OAuth2 credentials from request'''
-        log.debug('Repoze OAuth identify')
-        request = Request(environ)
-        if request.path != self.redirect_url:
-            return None
-        state = request.params.get('state')
-        decoded_state = json.loads(b64decode(state))
-        came_from = decoded_state.get('came_from', '/')
-        oauth = OAuth2Session(self.client_id, redirect_uri=self._redirect_uri(request), scope=self.scope)
-        token = oauth.fetch_token(self.token_endpoint,
-                                  client_secret=self.client_secret,
-                                  authorization_response=request.url)
-        return {'oauth2.token': token, 'came_from': came_from}
 
     def authenticate(self, environ, identity):
         '''
@@ -146,18 +158,10 @@ class OAuth2Plugin(object):
         rememberer = self._get_rememberer(environ)
         return rememberer.forget(environ, identity)
 
-    def _rechallenge(self, request):
-        """Re-issue a failed auth challenge at the postback url."""
-        if request.path == self.postback_path:
-            challenge_app = self.challenge(request.environ, "401 Unauthorized")
-            request.environ["repoze.who.application"] = challenge_app
-
     def _redirect_from_callback(self, request, identity):
         '''Redirect from the callback URL after a successful authentication.'''
         if request.path == self.redirect_url:
-            # came_from = identity.get(self.came_from_field)
-            # if came_from is None:
-            came_from = "/"
+            came_from = identity.get(self.came_from_field, '/')
             response = Response()
             response.status = 302
             response.location = came_from

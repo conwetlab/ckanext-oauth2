@@ -47,14 +47,14 @@ class OAuth2Plugin(plugins.SingletonPlugin):
     def configure(self, config):
         '''Store the OAuth 2 client configuration'''
         log.debug('configure')
-        self.logout_url = '/'
+        self.logout_url = '/user/logged_out'
         self.logout_next_name = '/'
 
     def identify(self):
         log.debug('identify')
         environ = toolkit.request.environ
         if "repoze.who.identity" in environ:
-            repoze_userid = environ["repoze.who.identity"]['repoze.who.userid']
+            repoze_userid = environ['repoze.who.identity']['repoze.who.userid']
             log.debug('User logged %r' % repoze_userid)
             toolkit.c.user = repoze_userid
         else:
@@ -65,20 +65,22 @@ class OAuth2Plugin(plugins.SingletonPlugin):
         if not toolkit.c.user:
             # A 401 HTTP Status will cause the login to be triggered
             return toolkit.abort(401)
-        redirect_to = toolkit.request.params.get('came_from', '/')
+        redirect_to = toolkit.request.headers.get('Referer', '/')
         toolkit.redirect_to(bytes(redirect_to))
 
     def logout(self):
         log.debug('logout')
         environ = toolkit.request.environ
-        repoze_userid = environ['repoze.who.identity']['repoze.who.userid']
 
-        for plugin_name in environ['repoze.who.plugins']:
-            plugin = environ['repoze.who.plugins'][plugin_name]
-            if hasattr(plugin, 'forget'):
-                headers = plugin.forget(environ, repoze_userid)
-                for header, value in headers:
-                    toolkit.response.headers.add(header, value)
+        if 'repoze.who.identity' in environ:
+            repoze_userid = environ['repoze.who.identity']['repoze.who.userid']
+
+            for plugin_name in environ['repoze.who.plugins']:
+                plugin = environ['repoze.who.plugins'][plugin_name]
+                if hasattr(plugin, 'forget'):
+                    headers = plugin.forget(environ, repoze_userid)
+                    for header, value in headers:
+                        toolkit.response.headers.add(header, value)
 
         return toolkit.redirect_to(bytes(self.logout_url), locale='default')
 
