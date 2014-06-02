@@ -16,14 +16,20 @@ To install the plugin, **enter your virtualenv**, download the source and instal
     $ git clone https://github.com/conwetlab/ckanext-oauth2
     $ python setup.py develop
 
-Add the following to your CKAN .ini file:
+Add the following to your CKAN `.ini` file:
 
 .. code-block:: ini
 
     ckan.plugins = oauth2 <other-plugins>
 
+    ## OAuth2 configuration
+    ckan.oauth2.logout_url = /user/logged_out/a
+    ckan.oauth2.register_url = https://YOUR_OAUTH_SERVICE/users/sign_up
+    ckan.oauth2.reset_url = https://YOUR_OAUTH_SERVICE/users/password/new
+    ckan.oauth2.edit_url = https://YOUR_OAUTH_SERVICE/settings
 
-Update your who.ini to make use of OAuth2. You must set an Authentication plugin. In this example we use `auth_tkt`:
+
+Update your `who.ini` to make use of OAuth2. You must set an Authentication plugin. In this example we use `auth_tkt`:
 
 .. code-block:: ini
 
@@ -56,4 +62,3 @@ Update your who.ini to make use of OAuth2. You must set an Authentication plugin
     [general]
     challenge_decider = repoze.who.classifiers:default_challenge_decider
     request_classifier = repoze.who.classifiers:default_request_classifier
-

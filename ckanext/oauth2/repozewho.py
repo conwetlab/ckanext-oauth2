@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-import logging
 import json
+import logging
 
 from base64 import b64decode, b64encode
 from repoze.who.interfaces import IIdentifier, IAuthenticator, IChallenger
@@ -80,19 +80,18 @@ class OAuth2Plugin(object):
         log.debug('Repoze OAuth challenge')
         request = Request(environ)
 
-        # Is the user logged?
-        if 'repoze.who.identity' in environ and 'repoze.who.userid' in environ['repoze.who.identity']:
-            # If the user is already logged, we mustn't try to log them again. It'll generate an infinite loop
-            location = request.headers.get('Referer', '/')
-            log.debug('User is trying to access to an Unauthorized function %r' % request.path)
-        else:
-            # Log the user in if it's not logged
+        if request.path == '/user/login':
+            # Only log the user when s/he tries to log in. Otherwise, the user will
+            # be redirected to the main page where an error will be shown
             came_from_url = request.url if not request.path.startswith('/user/login') else request.headers.get('Referer', '/')
             state = b64encode(bytes(json.dumps({self.came_from_field: came_from_url})))
             oauth = OAuth2Session(self.client_id, redirect_uri=self._redirect_uri(request), scope=self.scope, state=state)
             auth_url, _ = oauth.authorization_url(self.authorization_endpoint)
             location = auth_url
             log.debug("Challenge: Redirecting challenge to page {0}".format(auth_url))
+        else:
+            location = request.headers.get('Referer', '/')
+            log.debug('User is trying to access to an Unauthorized function %r' % request.path)
 
         response = Response()
         response.status = 302

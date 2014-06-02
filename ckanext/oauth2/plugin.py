@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 
 import logging
 
+from pylons import config
 from ckan import plugins
 from ckan.plugins import toolkit
 
@@ -42,13 +43,32 @@ class OAuth2Plugin(plugins.SingletonPlugin):
 
     plugins.implements(plugins.IAuthenticator, inherit=True)
     plugins.implements(plugins.IAuthFunctions, inherit=True)
-    plugins.implements(plugins.IConfigurable)
+    plugins.implements(plugins.IRoutes, inherit=True)
 
-    def configure(self, config):
+    def __init__(self, name=None):
         '''Store the OAuth 2 client configuration'''
-        log.debug('configure')
-        self.logout_url = '/user/logged_out'
-        self.logout_next_name = '/'
+        log.debug('Init')
+        self.logout_url = config.get('ckan.oauth2.logout_url', '/user/logged_out')
+        self.register_url = config.get('ckan.oauth2.register_url', None)
+        self.reset_url = config.get('ckan.oauth2.reset_url', None)
+        self.edit_url = config.get('ckan.oauth2.edit_url', None)
+
+    def before_map(self, m):
+        log.debug('Setting up the redirections to the OAuth2 service')
+
+        # Redirect the user to the OAuth service register page
+        if self.register_url:
+            m.redirect('/user/register', self.register_url)
+
+        # Redirect the user to the OAuth service reset page
+        if self.reset_url:
+            m.redirect('/user/reset', self.reset_url)
+
+        # Redirect the user to the OAuth service reset page
+        if self.edit_url:
+            m.redirect('/user/edit/{user}', self.edit_url)
+
+        return m
 
     def identify(self):
         log.debug('identify')
