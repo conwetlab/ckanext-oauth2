@@ -7,7 +7,7 @@ import json
 
 import httpretty
 
-from sure import expect
+# from sure import expect
 
 from oauthlib.oauth2 import InsecureTransportError
 
@@ -17,9 +17,9 @@ from zope.interface.verify import verifyClass
 
 from repoze.who.interfaces import IIdentifier, IAuthenticator, IChallenger
 from repoze.who.config import WhoConfig
-from repoze.who.middleware import PluggableAuthenticationMiddleware
+# from repoze.who.middleware import PluggableAuthenticationMiddleware
 
-from webtest import TestApp
+# from webtest import TestApp
 
 from ckanext.oauth2.repozewho import OAuth2Plugin, make_plugin
 from ckanext.oauth2.tests.utils import make_environ
@@ -80,6 +80,7 @@ class OAuth2PluginTest(unittest.TestCase):
             token_endpoint='https://test/oauth2/token/',
             client_id='client-id',
             client_secret='client-secret',
+            profile_api_user_field='nickName'
         )
 
     def test_implements(self):
@@ -94,13 +95,15 @@ class OAuth2PluginTest(unittest.TestCase):
             client_id='client-id',
             client_secret='client-secret',
             scope='profile other',
-            rememberer_name='fake')
+            rememberer_name='fake',
+            profile_api_user_field='nickName')
         self.assertEquals(plugin.authorization_endpoint, 'https://test/oauth2/authorize/')
         self.assertEquals(plugin.token_endpoint, 'https://test/oauth2/token/')
         self.assertEquals(plugin.client_id, 'client-id')
         self.assertEquals(plugin.client_secret, 'client-secret')
         self.assertEquals(plugin.scope, ['profile', 'other'])
         self.assertEquals(plugin.rememberer_name, 'fake')
+        self.assertEquals(plugin.profile_api_user_field, 'nickName')
 
     def test_make_plugin_missing(self):
         with self.assertRaises(ValueError):
@@ -122,12 +125,16 @@ class OAuth2PluginTest(unittest.TestCase):
             'refresh_token': 'refresh-token',
         }
         httpretty.register_uri(httpretty.POST, plugin.token_endpoint, body=json.dumps(token))
-
+   
         state = b64encode(json.dumps({'came_from': 'initial-page'}))
         environ = make_environ(PATH_INFO=plugin.redirect_url, QUERY_STRING='state={0}&code=code'.format(state))
         identity = plugin.identify(environ)
         self.assertIn('oauth2.token', identity)
-        self.assertEquals(identity['oauth2.token'], token)
+
+        for key in token:
+            self.assertIn(key, identity['oauth2.token'])
+            self.assertEquals(token[key], identity['oauth2.token'][key])
+
         self.assertIn('came_from', identity)
         self.assertEquals(identity['came_from'], 'initial-page')
 
@@ -147,11 +154,11 @@ class OAuth2PluginTest(unittest.TestCase):
         with self.assertRaises(InsecureTransportError):
             plugin.identify(environ)
 
-    def test_remember(self):
-        pass
+    # def test_remember(self):
+    #     pass
 
-    def test_forget(self):
-        pass
+    # def test_forget(self):
+    #     pass
 
-    def test_challenge(self):
-        pass
+    # def test_challenge(self):
+    #     pass
