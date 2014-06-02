@@ -23,7 +23,7 @@ Add the following to your CKAN `.ini` file:
     ckan.plugins = oauth2 <other-plugins>
 
     ## OAuth2 configuration
-    ckan.oauth2.logout_url = /user/logged_out/a
+    ckan.oauth2.logout_url = /user/logged_out
     ckan.oauth2.register_url = https://YOUR_OAUTH_SERVICE/users/sign_up
     ckan.oauth2.reset_url = https://YOUR_OAUTH_SERVICE/users/password/new
     ckan.oauth2.edit_url = https://YOUR_OAUTH_SERVICE/settings
