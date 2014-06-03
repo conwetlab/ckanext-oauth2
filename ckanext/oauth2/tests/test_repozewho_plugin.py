@@ -13,6 +13,7 @@ from ckanext.oauth2.repozewho import OAuth2Plugin, make_plugin
 from ckanext.oauth2.tests.utils import make_environ
 from mock import MagicMock
 from nose_parameterized import parameterized
+from oauthlib.oauth2 import InsecureTransportError
 from urllib import urlencode
 from repoze.who.interfaces import IIdentifier, IAuthenticator, IChallenger
 from zope.interface.verify import verifyClass
@@ -115,6 +116,31 @@ class OAuth2PluginTest(unittest.TestCase):
 
         self.assertIn('came_from', identity)
         self.assertEquals(identity['came_from'], 'initial-page')
+
+    @httpretty.activate
+    def test_identify_insecure(self):
+        plugin = self._plugin()
+        token = OAUTH2TOKEN
+        httpretty.register_uri(httpretty.POST, plugin.token_endpoint, body=json.dumps(token))
+
+        state = b64encode(json.dumps({'came_from': 'initial-page'}))
+        environ = make_environ(False, PATH_INFO=oauth2_repozewho.REDIRECT_URL, QUERY_STRING='state={0}&code=code'.format(state))
+        result = plugin.identify(environ)
+        self.assertEquals(None, result)
+
+    @httpretty.activate
+    def test_identify_error(self):
+        plugin = self._plugin()
+        token = {
+            'error': 'auth_error',
+            'error_description': 'Some description'
+        }
+        httpretty.register_uri(httpretty.POST, plugin.token_endpoint, body=json.dumps(token))
+
+        state = b64encode(json.dumps({'came_from': 'initial-page'}))
+        environ = make_environ(False, PATH_INFO=oauth2_repozewho.REDIRECT_URL, QUERY_STRING='state={0}&code=code'.format(state))
+        result = plugin.identify(environ)
+        self.assertEquals(None, result)
 
     @parameterized.expand([
         ('remember'),
