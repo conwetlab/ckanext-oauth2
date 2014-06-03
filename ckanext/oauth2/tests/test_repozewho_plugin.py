@@ -18,6 +18,13 @@ from urllib import urlencode
 from repoze.who.interfaces import IIdentifier, IAuthenticator, IChallenger
 from zope.interface.verify import verifyClass
 
+OAUTH2TOKEN = {
+    'access_token': 'token',
+    'token_type': 'Bearer',
+    'expires_in': '3600',
+    'refresh_token': 'refresh-token',
+}
+
 
 class OAuth2PluginTest(unittest.TestCase):
 
@@ -41,17 +48,23 @@ class OAuth2PluginTest(unittest.TestCase):
         oauth2_repozewho.User = self._User
         oauth2_repozewho.Session = self._Session
 
-    def _plugin(self):
-        return OAuth2Plugin(
+    def _plugin(self, fullname_field=True, mail_field=True):
+        plugin = OAuth2Plugin(
             authorization_endpoint='https://test/oauth2/authorize/',
             token_endpoint='https://test/oauth2/token/',
             client_id='client-id',
             client_secret='client-secret',
             profile_api_url=self._profile_api_url,
-            profile_api_user_field=self._user_field,
-            profile_api_fullname_field=self._fullname_field,
-            profile_api_mail_field=self._email_field
+            profile_api_user_field=self._user_field
         )
+
+        if fullname_field:
+            plugin.profile_api_fullname_field = self._fullname_field
+
+        if mail_field:
+            plugin.profile_api_mail_field = self._email_field
+
+        return plugin
 
     def test_implements(self):
         verifyClass(IIdentifier, OAuth2Plugin)
@@ -89,12 +102,7 @@ class OAuth2PluginTest(unittest.TestCase):
     @httpretty.activate
     def test_identify(self):
         plugin = self._plugin()
-        token = {
-            'access_token': 'token',
-            'token_type': 'Bearer',
-            'expires_in': '3600',
-            'refresh_token': 'refresh-token',
-        }
+        token = OAUTH2TOKEN
         httpretty.register_uri(httpretty.POST, plugin.token_endpoint, body=json.dumps(token))
 
         state = b64encode(json.dumps({'came_from': 'initial-page'}))
@@ -112,12 +120,7 @@ class OAuth2PluginTest(unittest.TestCase):
     @httpretty.activate
     def test_identify_insecure(self):
         plugin = self._plugin()
-        token = {
-            'access_token': 'token',
-            'token_type': 'Bearer',
-            'expires_in': '3600',
-            'refresh_token': 'refresh-token',
-        }
+        token = OAUTH2TOKEN
         httpretty.register_uri(httpretty.POST, plugin.token_endpoint, body=json.dumps(token))
 
         state = b64encode(json.dumps({'came_from': 'initial-page'}))
@@ -189,22 +192,29 @@ class OAuth2PluginTest(unittest.TestCase):
         ('test_user', 'Test User Full Name', 'test@test.com', False),
         ('test_user', None, 'test@test.com', False),
         ('test_user', 'Test User Full Name', None, False),
-        ('test_user', 'Test User Full Name', 'test@test.com', True, '/about'),
-        ('test_user', None, 'test@test.com', True, '/about'),
-        ('test_user', 'Test User Full Name', None, True, '/about'),
-        ('test_user', 'Test User Full Name', 'test@test.com', True, None)
+        ('test_user', 'Test User Full Name', 'test@test.com', True, True, True, '/about'),
+        ('test_user', None, 'test@test.com', True, True, True, '/about'),
+        ('test_user', 'Test User Full Name', None, True, True, True, '/about'),
+        ('test_user', 'Test User Full Name', 'test@test.com', True, True, True, None),
+        ('test_user', 'Test User Full Name', 'test@test.com', True, False, True, '/'),
+        ('test_user', None, 'test@test.com', True, False, True, '/'),
+        ('test_user', 'Test User Full Name', 'test@test.com', True, True, False, '/'),
+        ('test_user', 'Test User Full Name', None, True, True, False, '/')
+        ('test_user', 'Test User Full Name', 'test@test.com', True, False, False, None),
+        ('test_user', None, None, True, False, False, '/about')
     ])
     @httpretty.activate
-    def test_authenticate(self, username, full_name=None, email=None, user_exists=True, came_from='/'):
+    def test_authenticate(self, username, fullname=None, email=None, user_exists=True,
+                          fullname_field=True, email_field=True, came_from='/'):
 
-        plugin = self._plugin()
+        plugin = self._plugin(fullname_field, email_field)
 
         # Simulate the HTTP Request
         user_info = {}
         user_info[self._user_field] = username
 
-        if full_name:
-            user_info[self._fullname_field] = full_name
+        if fullname:
+            user_info[self._fullname_field] = fullname
 
         if email:
             user_info[self._email_field] = email
@@ -222,17 +232,13 @@ class OAuth2PluginTest(unittest.TestCase):
         oauth2_repozewho.Session = MagicMock()
         user = MagicMock()
         user.name = username
+        user.fullname = None
+        user.email = None
         oauth2_repozewho.User = MagicMock(return_value=user)
         oauth2_repozewho.User.by_name = MagicMock(return_value=user if user_exists else None)
 
         identity = {}
-        identity['oauth2.token'] = {
-            'access_token': 'OAUTH_TOKEN',
-            'token_type': 'bearer',
-            'expires_in': 2591999,
-            'expires_at': 9904315459.21328,
-            'refresh_token': 'REFRESH_TOKEN'
-        }
+        identity['oauth2.token'] = OAUTH2TOKEN
 
         if came_from is not None:
             identity['came_from'] = came_from
@@ -254,11 +260,15 @@ class OAuth2PluginTest(unittest.TestCase):
             self.assertEquals(0, oauth2_repozewho.User.called)
 
         # Check that user properties are set properly
-        if full_name:
-            self.assertEquals(full_name, user.fullname)
+        if fullname and fullname_field:
+            self.assertEquals(fullname, user.fullname)
+        else:
+            self.assertEquals(None, user.fullname)
 
-        if email:
+        if email and email_field:
             self.assertEquals(email, user.email)
+        else:
+            self.assertEquals(None, user.email)
 
         # Check that the user is saved
         oauth2_repozewho.Session.add.assert_called_once_with(user)
@@ -288,3 +298,12 @@ class OAuth2PluginTest(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             plugin.authenticate(environ, identity)
+
+    def test_authenticate_no_token(self):
+
+        plugin = self._plugin()
+        environ = identity = {}
+
+        result = plugin.authenticate(environ, identity)
+
+        self.assertEquals(None, result)
