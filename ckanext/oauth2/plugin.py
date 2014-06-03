@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 
 import logging
+import ckanext.oauth2.repozewho as oauth2_repozewho
 
 from pylons import config
 from ckan import plugins
@@ -56,6 +57,12 @@ class OAuth2Plugin(plugins.SingletonPlugin):
     def before_map(self, m):
         log.debug('Setting up the redirections to the OAuth2 service')
 
+        # We need to handle petitions received to the Callback URL
+        # since some error can arise and we need to process them
+        m.connect(oauth2_repozewho.REDIRECT_URL,
+                  controller='ckanext.oauth2.controller:OAuth2Controller',
+                  action='callback')
+
         # Redirect the user to the OAuth service register page
         if self.register_url:
             m.redirect('/user/register', self.register_url)
@@ -73,7 +80,7 @@ class OAuth2Plugin(plugins.SingletonPlugin):
     def identify(self):
         log.debug('identify')
         environ = toolkit.request.environ
-        if "repoze.who.identity" in environ:
+        if 'repoze.who.identity' in environ:
             repoze_userid = environ['repoze.who.identity']['repoze.who.userid']
             log.debug('User logged %r' % repoze_userid)
             toolkit.c.user = repoze_userid

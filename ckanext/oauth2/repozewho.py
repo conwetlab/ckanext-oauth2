@@ -14,18 +14,26 @@ from ckan.model import User, Session
 
 log = logging.getLogger(__name__)
 
+REDIRECT_URL = '/oauth2/callback'
+CAME_FROM_FIELD = 'came_from'
+
 
 def make_plugin(**kwargs):
     return OAuth2Plugin(**kwargs)
+
+
+def generate_state(url):
+    return b64encode(bytes(json.dumps({CAME_FROM_FIELD: url})))
+
+
+def get_came_from(state):
+    return json.loads(b64decode(state)).get(CAME_FROM_FIELD, '/')
 
 
 class OAuth2Plugin(object):
     '''
     A repoze.who plugin to authenticate via OAuth2
     '''
-
-    redirect_url = '/oauth2/callback'
-    came_from_field = 'came_from'
 
     implements(IIdentifier, IChallenger, IAuthenticator)
 
@@ -51,25 +59,7 @@ class OAuth2Plugin(object):
         self.profile_api_mail_field = profile_api_mail_field
 
     def _redirect_uri(self, request):
-        return ''.join([request.host_url, self.redirect_url])
-
-    def identify(self, environ):
-        '''Extract OAuth2 credentials from request'''
-        log.debug('Repoze OAuth identify')
-        request = Request(environ)
-
-        # Only execute this function when /oauth2/callback is called
-        if request.path != self.redirect_url:
-            return None
-
-        state = request.params.get('state')
-        decoded_state = json.loads(b64decode(state))
-        came_from = decoded_state.get(self.came_from_field, '/')
-        oauth = OAuth2Session(self.client_id, redirect_uri=self._redirect_uri(request), scope=self.scope)
-        token = oauth.fetch_token(self.token_endpoint,
-                                  client_secret=self.client_secret,
-                                  authorization_response=request.url)
-        return {'oauth2.token': token, self.came_from_field: came_from}
+        return ''.join([request.host_url, REDIRECT_URL])
 
     def challenge(self, environ, status, app_headers=(), forget_headers=()):
         '''Challenge for OAuth2 credentials.
@@ -77,6 +67,8 @@ class OAuth2Plugin(object):
         Redirect the user through the OAuth2 login process.  Once complete
         it will post the obtained BrowserID assertion to the configured
         postback URL.
+
+        The user will be only redirected on login attemps.
         '''
         log.debug('Repoze OAuth challenge')
         request = Request(environ)
@@ -85,7 +77,7 @@ class OAuth2Plugin(object):
             # Only log the user when s/he tries to log in. Otherwise, the user will
             # be redirected to the main page where an error will be shown
             came_from_url = request.headers.get('Referer', '/')
-            state = b64encode(bytes(json.dumps({self.came_from_field: came_from_url})))
+            state = generate_state(came_from_url)
             oauth = OAuth2Session(self.client_id, redirect_uri=self._redirect_uri(request), scope=self.scope, state=state)
             auth_url, _ = oauth.authorization_url(self.authorization_endpoint)
             location = auth_url
@@ -99,9 +91,43 @@ class OAuth2Plugin(object):
         response.location = location
         return response
 
+    def identify(self, environ):
+        '''
+        Extract OAuth2 credentials from request
+
+        This function is executed on each request. However, we only use it when the OAuth2
+        Callback is called. Otherwise None is returned.
+        '''
+        log.debug('Repoze OAuth identify')
+        request = Request(environ)
+
+        # Only execute this function when /oauth2/callback is called
+        if request.path != REDIRECT_URL:
+            return None
+
+        try:
+            # On succed, the authenticate function will execute
+            state = request.params.get('state')
+            came_from = get_came_from(state)
+            oauth = OAuth2Session(self.client_id, redirect_uri=self._redirect_uri(request), scope=self.scope)
+            token = oauth.fetch_token(self.token_endpoint,
+                                      client_secret=self.client_secret,
+                                      authorization_response=request.url)
+            return {'oauth2.token': token, CAME_FROM_FIELD: came_from}
+        except Exception as e:
+            log.error('The OAuth2 login fails: %r' % e)
+            return None
+
     def authenticate(self, environ, identity):
         '''
         Authenticate and extract identity from OAuth2 tokens
+
+        This function is executed inmediatly after when the identify function returns
+        something different from None: /oauth2/callback is called with the required parameteres
+
+        Please note, if this function does not override the property "repoze.who.application"
+        of the environ, the OAuth2 Callback controller will be executed. We realy in the
+        _redirect_from_callback function to do so.
         '''
         request = Request(environ)
         log.debug('Repoze OAuth authenticate')
@@ -160,8 +186,8 @@ class OAuth2Plugin(object):
 
     def _redirect_from_callback(self, request, identity):
         '''Redirect from the callback URL after a successful authentication.'''
-        if request.path == self.redirect_url:
-            came_from = identity.get(self.came_from_field, '/')
+        if request.path == REDIRECT_URL:
+            came_from = identity.get(CAME_FROM_FIELD, '/')
             response = Response()
             response.status = 302
             response.location = came_from

@@ -106,7 +106,7 @@ class OAuth2PluginTest(unittest.TestCase):
         httpretty.register_uri(httpretty.POST, plugin.token_endpoint, body=json.dumps(token))
 
         state = b64encode(json.dumps({'came_from': 'initial-page'}))
-        environ = make_environ(PATH_INFO=plugin.redirect_url, QUERY_STRING='state={0}&code=code'.format(state))
+        environ = make_environ(PATH_INFO=oauth2_repozewho.REDIRECT_URL, QUERY_STRING='state={0}&code=code'.format(state))
         identity = plugin.identify(environ)
         self.assertIn('oauth2.token', identity)
 
@@ -124,7 +124,7 @@ class OAuth2PluginTest(unittest.TestCase):
         httpretty.register_uri(httpretty.POST, plugin.token_endpoint, body=json.dumps(token))
 
         state = b64encode(json.dumps({'came_from': 'initial-page'}))
-        environ = make_environ(False, PATH_INFO=plugin.redirect_url, QUERY_STRING='state={0}&code=code'.format(state))
+        environ = make_environ(False, PATH_INFO=oauth2_repozewho.REDIRECT_URL, QUERY_STRING='state={0}&code=code'.format(state))
         with self.assertRaises(InsecureTransportError):
             plugin.identify(environ)
 
