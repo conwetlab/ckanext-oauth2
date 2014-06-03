@@ -199,7 +199,7 @@ class OAuth2PluginTest(unittest.TestCase):
         ('test_user', 'Test User Full Name', 'test@test.com', True, False, True, '/'),
         ('test_user', None, 'test@test.com', True, False, True, '/'),
         ('test_user', 'Test User Full Name', 'test@test.com', True, True, False, '/'),
-        ('test_user', 'Test User Full Name', None, True, True, False, '/')
+        ('test_user', 'Test User Full Name', None, True, True, False, '/'),
         ('test_user', 'Test User Full Name', 'test@test.com', True, False, False, None),
         ('test_user', None, None, True, False, False, '/about')
     ])
