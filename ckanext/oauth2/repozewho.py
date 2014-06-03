@@ -34,9 +34,10 @@ class OAuth2Plugin(object):
                  profile_api_fullname_field=None, profile_api_mail_field=None):
 
         # Check that all the required fields are provided
-        if not authorization_endpoint or not token_endpoint or not client_id or not client_secret or not profile_api_user_field:
-            raise ValueError('authorization_endpoint, token_endpoint, client_id, client_secret parameters '
-                             'and profile_api_user_field are required')
+        if not authorization_endpoint or not token_endpoint or not client_id or not client_secret \
+                or not profile_api_url or not profile_api_user_field:
+            raise ValueError('authorization_endpoint, token_endpoint, client_id, client_secret parameters, '
+                             'profile_api_url and profile_api_user_field are required')
 
         self.authorization_endpoint = authorization_endpoint
         self.token_endpoint = token_endpoint
@@ -83,7 +84,7 @@ class OAuth2Plugin(object):
         if request.path == '/user/login':
             # Only log the user when s/he tries to log in. Otherwise, the user will
             # be redirected to the main page where an error will be shown
-            came_from_url = request.url if not request.path.startswith('/user/login') else request.headers.get('Referer', '/')
+            came_from_url = request.headers.get('Referer', '/')
             state = b64encode(bytes(json.dumps({self.came_from_field: came_from_url})))
             oauth = OAuth2Session(self.client_id, redirect_uri=self._redirect_uri(request), scope=self.scope, state=state)
             auth_url, _ = oauth.authorization_url(self.authorization_endpoint)
@@ -116,11 +117,11 @@ class OAuth2Plugin(object):
                 user = User(name=user_data[self.profile_api_user_field])
 
             # Update fullname
-            if self.profile_api_fullname_field:
+            if self.profile_api_fullname_field and self.profile_api_fullname_field in user_data:
                 user.fullname = user_data[self.profile_api_fullname_field]
 
             # Update mail
-            if self.profile_api_mail_field:
+            if self.profile_api_mail_field and self.profile_api_mail_field in user_data:
                 user.email = user_data[self.profile_api_mail_field]
 
             # Save the user in the database

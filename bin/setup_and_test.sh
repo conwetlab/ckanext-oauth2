@@ -85,7 +85,7 @@ cd ..
 
 echo "Installing ckanext-oauth2 and its requirements..."
 python setup.py develop
-#pip install -r dev-requirements.txt
+pip install -r dev-requirements.txt
 
 
 echo "Running tests..."
