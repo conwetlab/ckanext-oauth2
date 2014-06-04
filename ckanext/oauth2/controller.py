@@ -24,4 +24,4 @@ class OAuth2Controller(base.BaseController):
         response.status_int = 301
         response.location = oauth2_repozewho.get_came_from(request.params.get('state'))
         helpers.flash_error(cgi.escape(request.GET.get('error_description',
-                            'It was impossible to loggin you using the OAuth2 Service')))
+                            'It was impossible to log in you using the OAuth2 Service')))

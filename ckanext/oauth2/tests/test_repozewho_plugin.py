@@ -13,7 +13,6 @@ from ckanext.oauth2.repozewho import OAuth2Plugin, make_plugin
 from ckanext.oauth2.tests.utils import make_environ
 from mock import MagicMock
 from nose_parameterized import parameterized
-from oauthlib.oauth2 import InsecureTransportError
 from urllib import urlencode
 from repoze.who.interfaces import IIdentifier, IAuthenticator, IChallenger
 from zope.interface.verify import verifyClass
