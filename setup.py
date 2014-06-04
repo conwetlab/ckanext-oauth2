@@ -31,7 +31,7 @@ def rst(filename):
 
 
 long_description = '\n'.join((
-    rst('README.rst'),
+    rst('README.md'),
     rst('CHANGELOG.rst'),
     ''
 ))
