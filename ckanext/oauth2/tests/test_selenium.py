@@ -1,13 +1,16 @@
 from selenium import webdriver
 from subprocess import Popen, PIPE
 import unittest
+import os
 
 
 class BasicLoginDifferentReferer(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls._process = Popen(['paster', 'serve', 'test-fiware.ini'], stdout=PIPE)
+        env = os.environ.copy()
+        env['DEBUG'] = 'True'
+        cls._process = Popen(['paster', 'serve', 'test-fiware.ini'], stdout=PIPE, env=env)
 
     @classmethod
     def tearDownClass(cls):
