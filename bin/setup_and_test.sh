@@ -5,6 +5,7 @@ trap 'jobs -p | xargs --no-run-if-empty kill' INT TERM EXIT
 export PATH=$PATH:/usr/local/bin
 export PIP_DOWNLOAD_CACHE=~/.pip_cache
 
+DEBUG=True
 WD=`pwd`
 POSTGRES_PORT=${POSTGRES_PORT:=5432}
 
