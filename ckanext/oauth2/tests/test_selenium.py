@@ -1,7 +1,10 @@
-from selenium import webdriver
-from subprocess import Popen, PIPE
 import unittest
 import os
+import time
+
+from nose_parameterized import parameterized
+from selenium import webdriver
+from subprocess import Popen, PIPE
 
 
 class BasicLoginDifferentReferer(unittest.TestCase):
@@ -10,7 +13,7 @@ class BasicLoginDifferentReferer(unittest.TestCase):
     def setUpClass(cls):
         env = os.environ.copy()
         env['DEBUG'] = 'True'
-        cls._process = Popen(['paster', 'serve', 'test-fiware.ini'], stdout=PIPE, env=env)
+        cls._process = Popen(['paster', 'serve', 'test-fiware.ini'], stdout=PIPE, stderr=PIPE, env=env)
 
     @classmethod
     def tearDownClass(cls):
@@ -42,6 +45,9 @@ class BasicLoginDifferentReferer(unittest.TestCase):
         driver.find_element_by_link_text("About").click()
         self.assertEqual("filab2 Example User", driver.find_element_by_css_selector("span.username").text)
         self.assertEqual(self.base_url + "about", driver.current_url)
+        driver.find_element_by_css_selector("a[title=\"Edit settings\"]").click()
+        time.sleep(3)   # Wait the OAuth2 Server to return the page
+        assert driver.current_url.startswith("https://account.lab.fi-ware.org/settings")
 
     def test_basic_login_different_referer(self):
         driver = self.driver
@@ -69,6 +75,16 @@ class BasicLoginDifferentReferer(unittest.TestCase):
         driver.find_element_by_name("commit").click()
         driver.find_element_by_name("cancel").click()
         assert driver.find_element_by_xpath("//div/div/div/div").text.startswith("The end-user or authorization server denied the request.")
+
+    @parameterized.expand([
+        ("user/register", "https://account.lab.fi-ware.org/users/sign_up"),
+        ("user/reset", "https://account.lab.fi-ware.org/users/password/new")
+    ])
+    def test_register(self, action, expected_url):
+        driver = self.driver
+        driver.get(self.base_url + action)
+        time.sleep(3)   # Wait the OAuth2 Server to return the page
+        self.assertEqual(expected_url, driver.current_url)
 
 if __name__ == "__main__":
     unittest.main()

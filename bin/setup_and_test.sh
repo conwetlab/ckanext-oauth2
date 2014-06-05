@@ -93,4 +93,4 @@ pip install -r dev-requirements.txt
 
 echo "Running tests..."
 nosetests --ckan --with-xunit --with-pylons=test.ini ckanext/oauth2/tests/ --with-coverage \
---cover-package=ckanext.oauth2 --cover-inclusive --cover-erase . --cover-xml
+--cover-package=ckanext.oauth2 --cover-inclusive --cover-erase . --cover-xml -v 2
