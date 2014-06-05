@@ -11,6 +11,9 @@ POSTGRES_PORT=${POSTGRES_PORT:=5432}
 
 echo "Downloading CKAN..."
 git clone https://github.com/ckan/ckan
+cd ckan
+git checkout release-v2.2
+cd $WD
 
 
 echo "Checking Solr..."
