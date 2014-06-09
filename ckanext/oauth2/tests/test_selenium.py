@@ -13,6 +13,7 @@ class BasicLoginDifferentReferer(unittest.TestCase):
     def setUpClass(cls):
         env = os.environ.copy()
         env['DEBUG'] = 'True'
+        env['OAUTHLIB_INSECURE_TRANSPORT'] = 'True'
         cls._process = Popen(['paster', 'serve', 'test-fiware.ini'], env=env)
 
     @classmethod
