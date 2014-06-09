@@ -116,6 +116,7 @@ class OAuth2Plugin(object):
             return {'oauth2.token': token, CAME_FROM_FIELD: came_from}
         except Exception as e:
             log.error('The OAuth2 login fails: %r' % e)
+            import traceback; traceback.print_exc()
             return None
 
     def authenticate(self, environ, identity):
