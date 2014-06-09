@@ -4,7 +4,7 @@ import time
 
 from nose_parameterized import parameterized
 from selenium import webdriver
-from subprocess import Popen, PIPE
+from subprocess import Popen
 
 
 class BasicLoginDifferentReferer(unittest.TestCase):
@@ -13,7 +13,7 @@ class BasicLoginDifferentReferer(unittest.TestCase):
     def setUpClass(cls):
         env = os.environ.copy()
         env['DEBUG'] = 'True'
-        cls._process = Popen(['paster', 'serve', 'test-fiware.ini'], stdout=PIPE, stderr=PIPE, env=env)
+        cls._process = Popen(['paster', 'serve', 'test-fiware.ini'], env=env)
 
     @classmethod
     def tearDownClass(cls):
