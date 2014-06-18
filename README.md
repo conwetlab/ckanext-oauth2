@@ -61,6 +61,11 @@ challenge_decider = repoze.who.classifiers:default_challenge_decider
 request_classifier = repoze.who.classifiers:default_request_classifier
 ```
 
+**Additional notes**:
+* This extension only works when your CKAN instance is working over HTTPS, since OAuth 2.0 depends on it. 
+* The callback URL that you should set on your OAuth 2.0 is: `https://YOUR_CKAN_INSTANCE/oauth2/callback`, replacing `YOUR_CKAN_INSTANCE` by the machine and port where your CKAN instance is running. 
+
+
 How it works?
 -------------
 1. If the user tries to perform a log in and it's not currently logged in, a 401 exception is raised by the `login` function of the `plugin.py` file. Under this circumstances, is the function `challenge` called. This function will only redirect the user to the OAuth2 Server log in page when a login attempt is performed. The `challenge` function ignores the 401 exceptions raised because the user doesn't have grants to perform an operation.
