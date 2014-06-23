@@ -84,6 +84,7 @@ class OAuth2Plugin(object):
             log.debug("Challenge: Redirecting challenge to page {0}".format(auth_url))
         else:
             location = request.headers.get('Referer', '/')
+            location = '/' if location != '/' and location == request.url else location
             log.debug('User is trying to access to an Unauthorized function %r' % request.path)
 
         response = Response()
