@@ -6,6 +6,7 @@ import ckanext.oauth2.repozewho as oauth2_repozewho
 
 from pylons import config
 from ckan import plugins
+from ckan.common import session
 from ckan.plugins import toolkit
 
 log = logging.getLogger(__name__)
@@ -78,6 +79,9 @@ class OAuth2Plugin(plugins.SingletonPlugin):
         return m
 
     def identify(self):
+        # Create session if it does not exist. Workaround to show flash messages
+        session.save()
+
         log.debug('identify')
         environ = toolkit.request.environ
         if 'repoze.who.identity' in environ:
