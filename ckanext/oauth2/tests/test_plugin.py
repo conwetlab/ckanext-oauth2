@@ -17,10 +17,14 @@ class PluginTest(unittest.TestCase):
         self._toolkit = plugin.toolkit
         plugin.toolkit = MagicMock()
 
+        self._session = plugin.session
+        plugin.session = MagicMock()
+
     def tearDown(self):
         # Unmock functions
         plugin.config = self._config
         plugin.toolkit = self._toolkit
+        plugin.session = self._session
 
     def _set_identity(self, identity):
         if identity:
@@ -99,6 +103,7 @@ class PluginTest(unittest.TestCase):
         self._plugin.identify()
 
         self.assertEquals(identity, plugin.toolkit.c.user)
+        plugin.session.save.assert_called_once()
 
     @parameterized.expand([
         (),
