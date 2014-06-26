@@ -7,10 +7,15 @@ export PIP_DOWNLOAD_CACHE=~/.pip_cache
 
 WD=`pwd`
 POSTGRES_PORT=${POSTGRES_PORT:=5432}
+CACHE_DIR=~/.cache
 
 
 echo "Downloading CKAN..."
-git clone https://github.com/ckan/ckan
+if [ ! -d "$CACHE_DIR/ckan" ]
+then
+    git clone https://github.com/ckan/ckan "$CACHE_DIR/ckan"
+fi
+ln -s "$CACHE_DIR/ckan" .
 cd ckan
 git checkout release-v2.2
 cd $WD
@@ -23,7 +28,6 @@ if [ $SOLR_ACTIVE -ne 0 ]
 then
     
     echo "Downloading Solr..."
-    CACHE_DIR=~/.cache
     FILE=solr-4.8.1.zip
     SOLAR_UNZIP_FOLDER=solr-4.8.1
 
