@@ -25,15 +25,25 @@ then
     echo "Downloading Solr..."
     CACHE_DIR=~/.cache
     FILE=solr-4.8.1.zip
-    if [ ! -f "$CACHE_DIR/$FILE" ]
+    SOLAR_UNZIP_FOLDER=solr-4.8.1
+
+    # If the solar folder does not exist, we have to build it
+    if [ ! -f "$CACHE_DIR/$SOLAR_UNZIP_FOLDER" ]
     then
-        wget --quiet --directory-prefix=$CACHE_DIR http://apache.rediris.es/lucene/solr/4.8.1/$FILE
+        # Download the solar installation file if it does not exist
+        if [ ! -f "$CACHE_DIR/$FILE" ]
+        then
+            wget --quiet --directory-prefix=$CACHE_DIR http://apache.rediris.es/lucene/solr/4.8.1/$FILE
+        fi
+
+        # Unzip the folder
+        unzip -q "$CACHE_DIR/$FILE" -d "$CACHE_DIR"
     fi
     
     echo "Configuring and starting Solr..."
-    unzip -q "$CACHE_DIR/$FILE"
-    mv solr-4.8.1/example/solr/collection1/conf/schema.xml  solr-4.8.1/example/solr/collection1/conf/schema.xml.bak 
-    ln -s $WD/ckan/ckan/config/solr/schema.xml solr-4.8.1/example/solr/collection1/conf/schema.xml
+    ln -s "$CACHE_DIR/$SOLAR_UNZIP_FOLDER" .
+    mv "$SOLAR_UNZIP_FOLDER/example/solr/collection1/conf/schema.xml"  "$SOLAR_UNZIP_FOLDER/example/solr/collection1/conf/schema.xml.bak"
+    ln -s $WD/ckan/ckan/config/solr/schema.xml "$SOLAR_UNZIP_FOLDER/example/solr/collection1/conf/schema.xml"
     cd solr-4.8.1/example
     java -jar start.jar 2>&1 > /dev/null &
     cd $WD
