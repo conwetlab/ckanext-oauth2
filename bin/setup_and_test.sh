@@ -28,7 +28,7 @@ then
     SOLAR_UNZIP_FOLDER=solr-4.8.1
 
     # If the solar folder does not exist, we have to build it
-    if [ ! -f "$CACHE_DIR/$SOLAR_UNZIP_FOLDER" ]
+    if [ ! -d "$CACHE_DIR/$SOLAR_UNZIP_FOLDER" ]
     then
         # Download the solar installation file if it does not exist
         if [ ! -f "$CACHE_DIR/$FILE" ]
