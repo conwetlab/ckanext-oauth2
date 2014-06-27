@@ -7,15 +7,9 @@ export PIP_DOWNLOAD_CACHE=~/.pip_cache
 
 WD=`pwd`
 POSTGRES_PORT=${POSTGRES_PORT:=5432}
-CACHE_DIR=~/.cache
-
 
 echo "Downloading CKAN..."
-if [ ! -d "$CACHE_DIR/ckan" ]
-then
-    git clone https://github.com/ckan/ckan "$CACHE_DIR/ckan"
-fi
-ln -s "$CACHE_DIR/ckan" .
+git clone https://github.com/ckan/ckan
 cd ckan
 git checkout release-v2.2
 cd $WD
@@ -28,7 +22,8 @@ if [ $SOLR_ACTIVE -ne 0 ]
 then
     
     echo "Downloading Solr..."
-    FILE=solr-4.8.1.zip
+    CACHE_DIR=~/.cache
+    FILE=solr-4.8.1.tgz
     SOLAR_UNZIP_FOLDER=solr-4.8.1
 
     # If the solar folder does not exist, we have to build it
@@ -37,11 +32,11 @@ then
         # Download the solar installation file if it does not exist
         if [ ! -f "$CACHE_DIR/$FILE" ]
         then
-            wget --quiet --directory-prefix=$CACHE_DIR http://apache.rediris.es/lucene/solr/4.8.1/$FILE
+            wget --quiet --timestamping --directory-prefix=$CACHE_DIR http://apache.rediris.es/lucene/solr/4.8.1/$FILE
         fi
 
         # Unzip the folder
-        unzip -q "$CACHE_DIR/$FILE" -d "$CACHE_DIR"
+        tar -xf "$CACHE_DIR/$FILE" --directory "$CACHE_DIR"
     fi
     
     echo "Configuring and starting Solr..."
