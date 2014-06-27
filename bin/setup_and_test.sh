@@ -30,13 +30,13 @@ then
     if [ ! -d "$CACHE_DIR/$SOLAR_UNZIP_FOLDER" ]
     then
         # Download the solar installation file if it does not exist
-        if [ ! -f "$CACHE_DIR/$FILE" ]
-        then
-            wget --quiet --timestamping --directory-prefix=$CACHE_DIR http://apache.rediris.es/lucene/solr/4.8.1/$FILE
-        fi
+        wget --quiet --timestamping --directory-prefix=$CACHE_DIR http://apache.rediris.es/lucene/solr/4.8.1/$FILE
 
         # Unzip the folder
         tar -xf "$CACHE_DIR/$FILE" --directory "$CACHE_DIR"
+
+        # Delete the downloaded tar.gz
+        rm "$CACHE_DIR/$FILE"
     fi
     
     echo "Configuring and starting Solr..."
