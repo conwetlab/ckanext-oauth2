@@ -7,6 +7,7 @@ import logging
 from base64 import b64decode, b64encode
 from repoze.who.interfaces import IIdentifier, IAuthenticator, IChallenger
 from requests_oauthlib import OAuth2Session
+from urlparse import urlparse
 from webob import Request, Response
 from zope.interface import implements
 
@@ -84,7 +85,13 @@ class OAuth2Plugin(object):
             log.debug("Challenge: Redirecting challenge to page {0}".format(auth_url))
         else:
             location = request.headers.get('Referer', '/')
-            location = '/' if location != '/' and location == request.url else location
+            url_parsed = urlparse(location)
+
+            if url_parsed.netloc != request.host or location == request.url:
+                # When the referer is another web site, the user must be redirected to the home page
+                # When the referer is the same than the requested page, the user must be redirected to the home page
+                location = '/'
+
             log.debug('User is trying to access to an Unauthorized function %r' % request.path)
 
         response = Response()

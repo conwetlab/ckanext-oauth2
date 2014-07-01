@@ -169,7 +169,8 @@ class OAuth2PluginTest(unittest.TestCase):
         ('/user/login', False),
         ('/ckan-admin', True, '/', '/'),
         ('/ckan-admin', False, '/', '/'),
-        ('/ckan-admin', False, '/ckan-admin', '/')
+        ('/ckan-admin', False, '/ckan-admin', '/'),
+        ('/ckan-admin', True, 'http://google.es/', '/')
     ])
     def test_challenge(self, path, include_referer=True, referer='/', expected_url=None):
 
