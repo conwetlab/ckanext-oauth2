@@ -42,7 +42,7 @@ class BasicLoginDifferentReferer(unittest.TestCase):
         driver.find_element_by_id("user_password").send_keys("filab1234")
         driver.find_element_by_name("commit").click()
         self.assertEqual("filab2 Example User", driver.find_element_by_link_text("filab2 Example User").text)
-        self.assertEqual(self.base_url, driver.current_url)
+        self.assertEqual(self.base_url + 'dashboard', driver.current_url)
         driver.find_element_by_link_text("About").click()
         self.assertEqual("filab2 Example User", driver.find_element_by_css_selector("span.username").text)
         self.assertEqual(self.base_url + "about", driver.current_url)
