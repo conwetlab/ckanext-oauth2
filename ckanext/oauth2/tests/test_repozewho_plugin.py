@@ -164,22 +164,28 @@ class OAuth2PluginTest(unittest.TestCase):
         getattr(authenticator, function_name).assert_called_once_with(environ, identity)
 
     @parameterized.expand([
-        ('/user/login', '/'),
-        ('/user/login', '/about'),
+        ('/user/login', True, '/'),
+        ('/user/login', True, '/about', '/about'),
+        ('/user/login', True, 'http://google.es'),
+        ('/user/login', True, 'http://localhost/'),
+        ('/user/login', True, 'http://localhost/about', 'http://localhost/about'),
+        ('/user/login', True, 'http://localhost/user/logged_out_redirect'),
+        ('/user/login', True, '/user/logged_out_redirect'),
         ('/user/login', False),
-        ('/ckan-admin', True, '/', '/'),
-        ('/ckan-admin', False, '/', '/'),
-        ('/ckan-admin', False, '/ckan-admin', '/'),
-        ('/ckan-admin', True, 'http://google.es/', '/')
+        ('/ckan-admin', True, '/', '/dashboard', '/'),
+        ('/ckan-admin', False, '/', '/dashboard', '/'),
+        ('/ckan-admin', False, '/ckan-admin', '/dashboard', '/'),
+        ('/ckan-admin', True, 'http://google.es/', '/', '/')
     ])
-    def test_challenge(self, path, include_referer=True, referer='/', expected_url=None):
+    def test_challenge(self, path, include_referer=True, referer='/', expected_referer='/dashboard', expected_url=None):
 
         # Create the plugin
         plugin = self._plugin()
 
         # Build mocks
         request = MagicMock()
-        request.host_url = 'http://localhost'
+        request.host = 'localhost'
+        request.host_url = 'http://' + request.host
         request.path = path
         request.headers = {}
         if include_referer:
@@ -192,7 +198,7 @@ class OAuth2PluginTest(unittest.TestCase):
         response = plugin.challenge(environ, 0)
 
         # Check
-        state = urlencode({'state': b64encode(bytes(json.dumps({'came_from': referer})))})
+        state = urlencode({'state': b64encode(bytes(json.dumps({'came_from': expected_referer})))})
         callback_url = 'https://test/oauth2/authorize/?response_type=code&client_id=client-id&' + \
                        'redirect_uri=http%3A%2F%2Flocalhost%2Foauth2%2Fcallback&' + state
         expected_url = expected_url if expected_url is not None else callback_url
@@ -259,7 +265,7 @@ class OAuth2PluginTest(unittest.TestCase):
             identity['came_from'] = came_from
             expected_came_from = came_from
         else:
-            expected_came_from = '/'
+            expected_came_from = '/dashboard'
 
         # Call the function
         plugin.authenticate(environ, identity)

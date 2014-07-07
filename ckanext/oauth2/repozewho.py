@@ -17,6 +17,7 @@ log = logging.getLogger(__name__)
 
 REDIRECT_URL = '/oauth2/callback'
 CAME_FROM_FIELD = 'came_from'
+INITIAL_PAGE = '/dashboard'
 
 
 def make_plugin(**kwargs):
@@ -77,7 +78,19 @@ class OAuth2Plugin(object):
         if request.path == '/user/login':
             # Only log the user when s/he tries to log in. Otherwise, the user will
             # be redirected to the main page where an error will be shown
-            came_from_url = request.headers.get('Referer', '/')
+            came_from_url = request.headers.get('Referer', INITIAL_PAGE)
+            came_from_url_parsed = urlparse(came_from_url)
+
+            # Avoid redirecting to external hosts when a user logs in
+            if came_from_url_parsed.netloc != '' and came_from_url_parsed.netloc != request.host:
+                came_from_url = INITIAL_PAGE
+
+            # When referer == HOME or referer == LOGOUT_PAGE, redirect the user to the dashboard
+            pages = ['/', '/user/logged_out_redirect']
+            if came_from_url_parsed.path in pages:
+                came_from_url = INITIAL_PAGE
+
+            came_from_url = INITIAL_PAGE if came_from_url_parsed.netloc != '' and came_from_url_parsed.netloc != request.host else came_from_url
             state = generate_state(came_from_url)
             oauth = OAuth2Session(self.client_id, redirect_uri=self._redirect_uri(request), scope=self.scope, state=state)
             auth_url, _ = oauth.authorization_url(self.authorization_endpoint)
@@ -195,7 +208,7 @@ class OAuth2Plugin(object):
     def _redirect_from_callback(self, request, identity):
         '''Redirect from the callback URL after a successful authentication.'''
         if request.path == REDIRECT_URL:
-            came_from = identity.get(CAME_FROM_FIELD, '/')
+            came_from = identity.get(CAME_FROM_FIELD, INITIAL_PAGE)
             response = Response()
             response.status = 302
             response.location = came_from
