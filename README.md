@@ -128,7 +128,7 @@ WSGISocketPrefix /var/run/wsgi
 </VirtualHost>
 ```
 
-Finaly, it's necessary to execute these commands:
+Finally, it's necessary to execute these commands:
 
 ```
 $ sudo a2enmod rewrite
