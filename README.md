@@ -99,8 +99,8 @@ Then, we have to modify the site configuration. To do so, we have to modify the 
 WSGISocketPrefix /var/run/wsgi
 <VirtualHost 0.0.0.0:443>
 
-    ServerName default.ckanhosted.com
-    ServerAlias www.default.ckanhosted.com
+    ServerName <SERVER_NAME>
+    ServerAlias <SERVER_ALIAS>
     WSGIScriptAlias / /etc/ckan/default/apache.wsgi
 
     # pass authorization info on (needed for rest api)
@@ -115,8 +115,8 @@ WSGISocketPrefix /var/run/wsgi
     CustomLog /var/log/apache2/ckan_default.custom.log combined
 
     SSLEngine On
-    SSLCertificateFile /etc/apache2/ssl/crt/vhost1.crt
-    SSLCertificateKeyFile /etc/apache2/ssl/key/vhost1.key
+    SSLCertificateFile <PATH_TO_YOUR_CERTIFICATE_FILE>
+    SSLCertificateKeyFile <PATH_TO_YOUR_KEY_FILE>
 
     <Location />
         SSLRequireSSL On
