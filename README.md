@@ -3,7 +3,7 @@ OAuth2 CKAN extension  [![Build Status](http://hercules.ls.fi.upm.es/jenkins/bui
 
 The OAuth2 extension allows site visitors to login through an OAuth2 server.
 
-NOTE: This extension requires ckan version 1.7 or higher.
+NOTE: This extension has been tested in ckan 2.2. It may not work in other versions.
 
 
 Activating and Installing
@@ -64,6 +64,77 @@ request_classifier = repoze.who.classifiers:default_request_classifier
 **Additional notes**:
 * This extension only works when your CKAN instance is working over HTTPS, since OAuth 2.0 depends on it. 
 * The callback URL that you should set on your OAuth 2.0 is: `https://YOUR_CKAN_INSTANCE/oauth2/callback`, replacing `YOUR_CKAN_INSTANCE` by the machine and port where your CKAN instance is running. 
+
+Starting CKAN over HTTPs
+------------------------
+CKAN uses Nginx and Apache2 by default. However, in order to run CKAN over HTTPs, the best option is using only an Apache server. To do so, first of all we have to stop the Nginx server:
+
+```
+$ sudo service nginx stop
+```
+
+Take into account that the nginx service will start every time you reboot your machine. If you want to avoid this, please execute the following command:
+
+```
+$ sudo update-rc.d -f nginx remove
+```
+
+Once that the nginx server is stopped, we should modify the Apache configuration. First, modify the `/etc/apache2/ports.conf` file and replace the following two lines:
+
+```
+NameVirtualHost *:8080
+Listen 8080
+```
+
+by these ones:
+
+```
+# NameVirtualHost *:8080
+# Listen 8080
+```
+
+Then, we have to modify the site configuration. To do so, we have to modify the `/etc/apache2/sites-available/ckan_default` file and replace it content by the following one:
+
+```
+WSGISocketPrefix /var/run/wsgi
+<VirtualHost 0.0.0.0:443>
+
+    ServerName default.ckanhosted.com
+    ServerAlias www.default.ckanhosted.com
+    WSGIScriptAlias / /etc/ckan/default/apache.wsgi
+
+    # pass authorization info on (needed for rest api)
+    WSGIPassAuthorization On
+
+    # Deploy as a daemon (avoids conflicts between CKAN instances)
+    WSGIDaemonProcess ckan_default display-name=ckan_default processes=2 threads=15
+
+    WSGIProcessGroup ckan_default
+
+    ErrorLog /var/log/apache2/ckan_default.error.log
+    CustomLog /var/log/apache2/ckan_default.custom.log combined
+
+    SSLEngine On
+    SSLCertificateFile /etc/apache2/ssl/crt/vhost1.crt
+    SSLCertificateKeyFile /etc/apache2/ssl/key/vhost1.key
+
+    <Location />
+        SSLRequireSSL On
+        SSLVerifyClient optional
+        SSLVerifyDepth 1
+        SSLOptions +StdEnvVars +StrictRequire
+    </Location>
+
+</VirtualHost>
+```
+
+Finaly, it's necessary to execute these commands:
+
+```
+$ sudo a2enmod rewrite
+$ sudo a2enmod ssl
+$ sudo service apache2 restart
+```
 
 
 How it works?
