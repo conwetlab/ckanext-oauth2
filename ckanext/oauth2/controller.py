@@ -21,7 +21,7 @@ class OAuth2Controller(base.BaseController):
         '''
         log.debug('Callback Controller')
         # Move to the came_from page coded in the state of the OAuth request
-        response.status_int = 301
+        response.status_int = 302   # FOUND
         redirect_url = oauth2_repozewho.get_came_from(request.params.get('state'))
         redirect_url = '/' if redirect_url == oauth2_repozewho.INITIAL_PAGE else redirect_url
         response.location = redirect_url

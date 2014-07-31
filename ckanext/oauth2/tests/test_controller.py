@@ -6,7 +6,7 @@ from base64 import b64decode, b64encode
 from mock import MagicMock
 from nose_parameterized import parameterized
 
-RETURNED_STATUS = 301
+RETURNED_STATUS = 302
 DEFAULT_MESSAGE = 'It was impossible to log in you using the OAuth2 Service'
 EXAMPLE_FLASH = 'This is a test'
 CAME_FROM_FIELD = 'came_from'
