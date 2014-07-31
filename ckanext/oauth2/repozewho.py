@@ -95,7 +95,7 @@ class OAuth2Plugin(object):
             oauth = OAuth2Session(self.client_id, redirect_uri=self._redirect_uri(request), scope=self.scope, state=state)
             auth_url, _ = oauth.authorization_url(self.authorization_endpoint)
             location = auth_url
-            log.debug("Challenge: Redirecting challenge to page {0}".format(auth_url))
+            log.debug('Challenge: Redirecting challenge to page {0}'.format(auth_url))
         else:
             location = request.headers.get('Referer', '/')
             url_parsed = urlparse(location)
@@ -147,7 +147,7 @@ class OAuth2Plugin(object):
         something different from None: /oauth2/callback is called with the required parameteres
 
         Please note, if this function does not override the property "repoze.who.application"
-        of the environ, the OAuth2 Callback controller will be executed. We realy in the
+        of the environ, the OAuth2 Callback controller will be executed. We relay in the
         _redirect_from_callback function to do so.
         '''
         request = Request(environ)
@@ -212,4 +212,4 @@ class OAuth2Plugin(object):
             response = Response()
             response.status = 302
             response.location = came_from
-            request.environ["repoze.who.application"] = response
+            request.environ['repoze.who.application'] = response

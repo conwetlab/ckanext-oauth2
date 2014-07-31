@@ -16,8 +16,8 @@ class OAuth2Controller(base.BaseController):
         '''
         If the callback is called properly, this function won't be executed.
         This function is only executed when an error arises login the user in
-        the OAuth2 Server (i.e.: the user don't allow the application to access
-        their data)
+        the OAuth2 Server (i.e.: a user doesn't allow the application to access
+        their data, the application is not running over HTTPs,...)
         '''
         log.debug('Callback Controller')
         # Move to the came_from page coded in the state of the OAuth request
