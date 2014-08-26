@@ -102,8 +102,17 @@ class PluginTest(unittest.TestCase):
         self._set_identity(identity)
 
         usertoken = MagicMock()
-        usertoken.token = '{"access_token":"sdkfdsofdsi", "refresh_token":"djshfajiywer"}'
-        plugin.db.UserToken.by_user_name = MagicMock(return_value=usertoken)
+        usertoken.access_token = 'sdkfdsofdsi'
+        usertoken.refresh_token = 'djshfajiywer'
+        usertoken.token_type = 'bearer'
+        usertoken.expires_in = '2678399'
+
+        oauth2Plugin = MagicMock()
+        oauth2Plugin.get_token = MagicMock(return_value=usertoken)
+
+        plugin.toolkit.request.environ['repoze.who.plugins'] = {
+            'oauth2': oauth2Plugin
+        }
 
         # The identify function must set the user id in this variable
         plugin.toolkit.c.user = None
@@ -113,7 +122,7 @@ class PluginTest(unittest.TestCase):
         self._plugin.identify()
 
         self.assertEquals(identity, plugin.toolkit.c.user)
-        expected_token = None if identity is None else json.loads(usertoken.token)
+        expected_token = None if identity is None else usertoken
         self.assertEquals(expected_token, plugin.toolkit.c.usertoken)
         plugin.session.save.assert_called_once()
 

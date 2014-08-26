@@ -175,17 +175,10 @@ class OAuth2Plugin(object):
                 user.email = user_data[self.profile_api_mail_field]
 
             # Update token
-            user_token = db.UserToken.by_user_name(user_name=user_name)
-            # Create the user if it does not exist
-            if not user_token:
-                user_token = db.UserToken()
-                user_token.user_name = user_name
-            # Update token
-            user_token.token = json.dumps(identity['oauth2.token'])
+            self.update_token(user_name, identity['oauth2.token'])
 
             # Save the user in the database
             model.Session.add(user)
-            model.Session.add(user_token)
             model.Session.commit()
             model.Session.remove()
 
@@ -227,20 +220,41 @@ class OAuth2Plugin(object):
             response.location = came_from
             request.environ['repoze.who.application'] = response
 
-    def renwew_token(self, user_name):
-
+    def get_token(self, user_name):
         user_token = db.UserToken.by_user_name(user_name=user_name)
-
         if user_token:
+            return {
+                'access_token': user_token.access_token,
+                'refresh_token': user_token.refresh_token,
+                'expires_in': user_token.expires_in,
+                'token_type': user_token.token_type
+            }
+
+    def update_token(self, user_name, token):
+        user_token = db.UserToken.by_user_name(user_name=user_name)
+        # Create the user if it does not exist
+        if not user_token:
+            user_token = db.UserToken()
+            user_token.user_name = user_name
+        # Save the new token
+        user_token.access_token = token['access_token']
+        user_token.token_type = token['token_type']
+        user_token.refresh_token = token['refresh_token']
+        user_token.expires_in = token['expires_in']
+        model.Session.add(user_token)
+        model.Session.commit()
+
+    def refresh_token(self, user_name):
+        token = self.get_token(user_name)
+        if token:
+
             # Refresh the token
-            client = OAuth2Session(self.client_id, token=json.loads(user_token.token), scope=self.scope)
+            client = OAuth2Session(self.client_id, token=token, scope=self.scope)
             token = client.refresh_token(self.token_endpoint, client_secret=self.client_secret, client_id=self.client_id)
             # Save the new token
-            user_token.token = json.dumps(token)
-            model.Session.add(user_token)
-            model.Session.commit()
+            self.update_token(user_name, token)
 
-            log.info('Token for user %s has been updated properly' % token)
+            log.info('Token for user %s has been updated properly' % user_name)
             return token
         else:
             log.warn('User %s has no refresh token' % user_name)

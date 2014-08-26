@@ -89,8 +89,8 @@ class OAuth2Plugin(plugins.SingletonPlugin):
         # Create session if it does not exist. Workaround to show flash messages
         session.save()
 
-        def _renew_and_save_token(user_name):
-            new_token = toolkit.request.environ['repoze.who.plugins']['oauth2'].renwew_token(user_name)
+        def _refresh_and_save_token(user_name):
+            new_token = toolkit.request.environ['repoze.who.plugins']['oauth2'].refresh_token(user_name)
             if new_token:
                 toolkit.c.usertoken = new_token
 
@@ -100,8 +100,8 @@ class OAuth2Plugin(plugins.SingletonPlugin):
             repoze_userid = environ['repoze.who.identity']['repoze.who.userid']
             log.debug('User logged %r' % repoze_userid)
             toolkit.c.user = repoze_userid
-            toolkit.c.usertoken = json.loads(db.UserToken.by_user_name(user_name=repoze_userid).token)
-            toolkit.c.usertoken_renew = partial(_renew_and_save_token, repoze_userid)
+            toolkit.c.usertoken = toolkit.request.environ['repoze.who.plugins']['oauth2'].get_token(repoze_userid)
+            toolkit.c.usertoken_refresh = partial(_refresh_and_save_token, repoze_userid)
         else:
             log.warn('The user is not currently logged...')
 
