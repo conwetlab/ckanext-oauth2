@@ -21,7 +21,7 @@ OAUTH2TOKEN = {
     'access_token': 'token',
     'token_type': 'Bearer',
     'expires_in': '3600',
-    'refresh_token': 'refresh-token',
+    'refresh_token': 'refresh_token',
 }
 
 
@@ -40,6 +40,7 @@ class OAuth2PluginTest(unittest.TestCase):
         self._User = oauth2_repozewho.model.User
         self._Session = oauth2_repozewho.model.Session
         self._db = oauth2_repozewho.db
+        self._OAuth2Session = oauth2_repozewho.OAuth2Session
 
     def tearDown(self):
         # Reset the functions
@@ -48,6 +49,7 @@ class OAuth2PluginTest(unittest.TestCase):
         oauth2_repozewho.model.User = self._User
         oauth2_repozewho.model.Session = self._Session
         oauth2_repozewho.db = self._db
+        oauth2_repozewho.OAuth2Session = self._OAuth2Session
 
     def _plugin(self, fullname_field=True, mail_field=True):
         plugin = OAuth2Plugin(
@@ -231,6 +233,7 @@ class OAuth2PluginTest(unittest.TestCase):
                           fullname_field=True, email_field=True, came_from='/'):
 
         plugin = self._plugin(fullname_field, email_field)
+        plugin.update_token = MagicMock()   # Mock the function. It'll be tested separately
 
         # Simulate the HTTP Request
         user_info = {}
@@ -253,10 +256,6 @@ class OAuth2PluginTest(unittest.TestCase):
         oauth2_repozewho.Response = MagicMock()
         environ = MagicMock()
         oauth2_repozewho.model.Session = MagicMock()
-        usertoken = MagicMock()
-        usertoken.user_name = username
-        usertoken.token = '{"access_token":"sdkfdsofdsi", "refresh_token":"djshfajiywer"}'
-        oauth2_repozewho.db.UserToken.by_user_name = MagicMock(return_value=usertoken)
         user = MagicMock()
         user.name = username
         user.fullname = None
@@ -298,8 +297,8 @@ class OAuth2PluginTest(unittest.TestCase):
             self.assertEquals(None, user.email)
 
         # Check that the user is saved
-        oauth2_repozewho.model.Session.add.assert_any_call(user)
-        oauth2_repozewho.model.Session.add.assert_any_call(usertoken)
+        plugin.update_token.assert_called_once_with(username, OAUTH2TOKEN)
+        oauth2_repozewho.model.Session.add.assert_called_once_with(user)
         oauth2_repozewho.model.Session.commit.assert_called_once()
         oauth2_repozewho.model.Session.remove.assert_called_once()
 
@@ -335,3 +334,103 @@ class OAuth2PluginTest(unittest.TestCase):
         result = plugin.authenticate(environ, identity)
 
         self.assertEquals(None, result)
+
+    def test_get_token_non_existing_user(self):
+        plugin = self._plugin()
+        oauth2_repozewho.db.UserToken.by_user_name = MagicMock(return_value=None)
+        self.assertIsNone(plugin.get_token('user'))
+
+    def test_get_token_existing_user(self):
+        plugin = self._plugin()
+
+        usertoken = MagicMock()
+        usertoken.access_token = OAUTH2TOKEN['access_token']
+        usertoken.token_type = OAUTH2TOKEN['token_type']
+        usertoken.expires_in = OAUTH2TOKEN['expires_in']
+        usertoken.refresh_token = OAUTH2TOKEN['refresh_token']
+
+        oauth2_repozewho.db.UserToken.by_user_name = MagicMock(return_value=usertoken)
+        self.assertEquals(OAUTH2TOKEN, plugin.get_token('user'))
+
+    @parameterized.expand([
+        (True,),
+        (False,)
+    ])
+    def test_update_token(self, user_exists):
+        plugin = self._plugin()
+
+        if user_exists:
+            usertoken = MagicMock()
+            usertoken.access_token = OAUTH2TOKEN['access_token']
+            usertoken.token_type = OAUTH2TOKEN['token_type']
+            usertoken.expires_in = OAUTH2TOKEN['expires_in']
+            usertoken.refresh_token = OAUTH2TOKEN['refresh_token']
+        else:
+            usertoken = None
+            oauth2_repozewho.db.UserToken = MagicMock()
+
+        oauth2_repozewho.model.Session = MagicMock()
+        oauth2_repozewho.db.UserToken.by_user_name = MagicMock(return_value=usertoken)
+
+        # The token to be updated
+        newtoken = {
+            'access_token': 'new_access_token',
+            'token_type': 'new_token_type',
+            'expires_in': 'new_expires_in',
+            'refresh_token': 'new_refresh_token'
+        }
+
+        plugin.update_token('user', newtoken)
+
+        # Check that the object has been stored
+        oauth2_repozewho.model.Session.add.assert_called_once()
+        oauth2_repozewho.model.Session.commit.assert_called_once()
+
+        # Check that the object contains the correct information
+        tk = oauth2_repozewho.model.Session.add.call_args_list[0][0][0]
+        self.assertEquals(newtoken['access_token'], tk.access_token)
+        self.assertEquals(newtoken['token_type'], tk.token_type)
+        self.assertEquals(newtoken['expires_in'], tk.expires_in)
+        self.assertEquals(newtoken['refresh_token'], tk.refresh_token)
+
+    @parameterized.expand([
+        (True,),
+        (False,)
+    ])
+    def test_refresh_token(self, user_exists):
+        username = 'user'
+        plugin = self._plugin()
+
+        # mock get_token
+        if user_exists:
+            current_token = OAUTH2TOKEN
+        else:
+            current_token = None
+
+        plugin.get_token = MagicMock(return_value=current_token)
+
+        # mock update_token
+        plugin.update_token = MagicMock()
+
+        # The token returned by the system
+        newtoken = {
+            'access_token': 'new_access_token',
+            'token_type': 'new_token_type',
+            'expires_in': 'new_expires_in',
+            'refresh_token': 'new_refresh_token'
+        }
+        session = MagicMock()
+        session.refresh_token = MagicMock(return_value=newtoken)
+        oauth2_repozewho.OAuth2Session = MagicMock(return_value=session)
+
+        # Call the function
+        plugin.refresh_token(username)
+
+        if user_exists:
+            oauth2_repozewho.OAuth2Session.assert_called_once_with(plugin.client_id, token=current_token, scope=plugin.scope)
+            session.refresh_token.assert_called_once_with(plugin.token_endpoint, client_secret=plugin.client_secret, client_id=plugin.client_id)
+            plugin.update_token.assert_called_once_with(username, newtoken)
+        else:
+            self.assertEquals(0, oauth2_repozewho.OAuth2Session.call_count)
+            self.assertEquals(0, session.refresh_token.call_count)
+            self.assertEquals(0, plugin.update_token.call_count)
