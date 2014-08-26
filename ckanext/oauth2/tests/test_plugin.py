@@ -1,4 +1,3 @@
-import json
 import unittest
 import ckanext.oauth2.plugin as plugin
 
@@ -117,14 +116,23 @@ class PluginTest(unittest.TestCase):
         # The identify function must set the user id in this variable
         plugin.toolkit.c.user = None
         plugin.toolkit.c.usertoken = None
+        plugin.toolkit.c.usertoken_refresh = None
 
         # Call the function
         self._plugin.identify()
 
         self.assertEquals(identity, plugin.toolkit.c.user)
-        expected_token = None if identity is None else usertoken
-        self.assertEquals(expected_token, plugin.toolkit.c.usertoken)
         plugin.session.save.assert_called_once()
+
+        if identity is None:
+            self.assertIsNone(plugin.toolkit.c.usertoken)
+            self.assertIsNone(plugin.toolkit.c.usertoken_refresh)
+        else:
+            self.assertEquals(usertoken, plugin.toolkit.c.usertoken)
+
+            # method 'usertoken_refresh' shpuld relay on the one provided by the repoze.who module
+            plugin.toolkit.c.usertoken_refresh()
+            plugin.toolkit.request.environ['repoze.who.plugins']['oauth2'].refresh_token.assert_called_once_with(identity)
 
     @parameterized.expand([
         (),
