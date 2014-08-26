@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+import ckan.model as model
+import db
 import json
 import logging
 
@@ -10,8 +12,6 @@ from requests_oauthlib import OAuth2Session
 from urlparse import urlparse
 from webob import Request, Response
 from zope.interface import implements
-
-from ckan.model import User, Session
 
 log = logging.getLogger(__name__)
 
@@ -59,6 +59,9 @@ class OAuth2Plugin(object):
         self.profile_api_user_field = profile_api_user_field
         self.profile_api_fullname_field = profile_api_fullname_field
         self.profile_api_mail_field = profile_api_mail_field
+
+        # Init db
+        db.init_db(model)
 
     def _redirect_uri(self, request):
         return ''.join([request.host_url, REDIRECT_URL])
@@ -156,12 +159,12 @@ class OAuth2Plugin(object):
             oauth = OAuth2Session(self.client_id, token=identity['oauth2.token'])
             profile_response = oauth.get(self.profile_api_url)
             user_data = profile_response.json()
-            username = user_data[self.profile_api_user_field]
-            user = User.by_name(username)
+            user_name = user_data[self.profile_api_user_field]
+            user = model.User.by_name(user_name)
 
             if user is None:
                 # If the user does not exist, it's created
-                user = User(name=user_data[self.profile_api_user_field])
+                user = model.User(name=user_name)
 
             # Update fullname
             if self.profile_api_fullname_field and self.profile_api_fullname_field in user_data:
@@ -171,10 +174,20 @@ class OAuth2Plugin(object):
             if self.profile_api_mail_field and self.profile_api_mail_field in user_data:
                 user.email = user_data[self.profile_api_mail_field]
 
+            # Update token
+            user_token = db.UserToken.by_user_name(user_name=user_name)
+            # Create the user if it does not exist
+            if not user_token:
+                user_token = db.UserToken()
+                user_token.user_name = user_name
+            # Update token
+            user_token.token = json.dumps(identity['oauth2.token'])
+
             # Save the user in the database
-            Session.add(user)
-            Session.commit()
-            Session.remove()
+            model.Session.add(user)
+            model.Session.add(user_token)
+            model.Session.commit()
+            model.Session.remove()
 
             identity.update({'repoze.who.userid': user.name})
             self._redirect_from_callback(request, identity)
@@ -213,3 +226,21 @@ class OAuth2Plugin(object):
             response.status = 302
             response.location = came_from
             request.environ['repoze.who.application'] = response
+
+    def renwew_token(self, user_name):
+
+        user_token = db.UserToken.by_user_name(user_name=user_name)
+
+        if user_token:
+            # Refresh the token
+            client = OAuth2Session(self.client_id, token=json.loads(user_token.token), scope=self.scope)
+            token = client.refresh_token(self.token_endpoint, client_secret=self.client_secret, client_id=self.client_id)
+            # Save the new token
+            user_token.token = json.dumps(token)
+            model.Session.add(user_token)
+            model.Session.commit()
+
+            log.info('Token for user %s has been updated properly' % token)
+            return token
+        else:
+            log.warn('User %s has no refresh token' % user_name)
