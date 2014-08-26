@@ -37,15 +37,17 @@ class OAuth2PluginTest(unittest.TestCase):
         # Get the functions that can be mocked and affect other tests
         self._request = oauth2_repozewho.Request
         self._response = oauth2_repozewho.Response
-        self._User = oauth2_repozewho.User
-        self._Session = oauth2_repozewho.Session
+        self._User = oauth2_repozewho.model.User
+        self._Session = oauth2_repozewho.model.Session
+        self._db = oauth2_repozewho.db
 
     def tearDown(self):
         # Reset the functions
         oauth2_repozewho.Request = self._request
         oauth2_repozewho.Response = self._response
-        oauth2_repozewho.User = self._User
-        oauth2_repozewho.Session = self._Session
+        oauth2_repozewho.model.User = self._User
+        oauth2_repozewho.model.Session = self._Session
+        oauth2_repozewho.db = self._db
 
     def _plugin(self, fullname_field=True, mail_field=True):
         plugin = OAuth2Plugin(
@@ -250,13 +252,17 @@ class OAuth2PluginTest(unittest.TestCase):
         oauth2_repozewho.Request = MagicMock(return_value=request)
         oauth2_repozewho.Response = MagicMock()
         environ = MagicMock()
-        oauth2_repozewho.Session = MagicMock()
+        oauth2_repozewho.model.Session = MagicMock()
+        usertoken = MagicMock()
+        usertoken.user_name = username
+        usertoken.token = '{"access_token":"sdkfdsofdsi", "refresh_token":"djshfajiywer"}'
+        oauth2_repozewho.db.UserToken.by_user_name = MagicMock(return_value=usertoken)
         user = MagicMock()
         user.name = username
         user.fullname = None
         user.email = None
-        oauth2_repozewho.User = MagicMock(return_value=user)
-        oauth2_repozewho.User.by_name = MagicMock(return_value=user if user_exists else None)
+        oauth2_repozewho.model.User = MagicMock(return_value=user)
+        oauth2_repozewho.model.User.by_name = MagicMock(return_value=user if user_exists else None)
 
         identity = {}
         identity['oauth2.token'] = OAUTH2TOKEN
@@ -272,13 +278,13 @@ class OAuth2PluginTest(unittest.TestCase):
 
         # Asserts
         oauth2_repozewho.Request.assert_called_once_with(environ)
-        oauth2_repozewho.User.by_name.assert_called_once_with(username)
+        oauth2_repozewho.model.User.by_name.assert_called_once_with(username)
 
         # Check if the user is created or not
         if not user_exists:
-            oauth2_repozewho.User.assert_called_once_with(name=username)
+            oauth2_repozewho.model.User.assert_called_once_with(name=username)
         else:
-            self.assertEquals(0, oauth2_repozewho.User.called)
+            self.assertEquals(0, oauth2_repozewho.model.User.called)
 
         # Check that user properties are set properly
         if fullname and fullname_field:
@@ -292,9 +298,10 @@ class OAuth2PluginTest(unittest.TestCase):
             self.assertEquals(None, user.email)
 
         # Check that the user is saved
-        oauth2_repozewho.Session.add.assert_called_once_with(user)
-        oauth2_repozewho.Session.commit.assert_called_once()
-        oauth2_repozewho.Session.remove.assert_called_once()
+        oauth2_repozewho.model.Session.add.assert_any_call(user)
+        oauth2_repozewho.model.Session.add.assert_any_call(usertoken)
+        oauth2_repozewho.model.Session.commit.assert_called_once()
+        oauth2_repozewho.model.Session.remove.assert_called_once()
 
         # The identity object should contain the user name
         self.assertIn('repoze.who.userid', identity)
