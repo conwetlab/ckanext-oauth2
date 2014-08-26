@@ -106,8 +106,15 @@ class PluginTest(unittest.TestCase):
         usertoken.token_type = 'bearer'
         usertoken.expires_in = '2678399'
 
+        newtoken = MagicMock()
+        newtoken.access_token = 'sdkfdsofdsi'
+        newtoken.refresh_token = 'djshfajiywer'
+        newtoken.token_type = 'bearer'
+        newtoken.expires_in = '2678399'
+
         oauth2Plugin = MagicMock()
         oauth2Plugin.get_token = MagicMock(return_value=usertoken)
+        oauth2Plugin.refresh_token = MagicMock(return_value=newtoken)
 
         plugin.toolkit.request.environ['repoze.who.plugins'] = {
             'oauth2': oauth2Plugin
@@ -133,6 +140,7 @@ class PluginTest(unittest.TestCase):
             # method 'usertoken_refresh' shpuld relay on the one provided by the repoze.who module
             plugin.toolkit.c.usertoken_refresh()
             plugin.toolkit.request.environ['repoze.who.plugins']['oauth2'].refresh_token.assert_called_once_with(identity)
+            self.assertEquals(newtoken, plugin.toolkit.c.usertoken)
 
     @parameterized.expand([
         (),

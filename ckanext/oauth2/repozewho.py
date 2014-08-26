@@ -247,13 +247,9 @@ class OAuth2Plugin(object):
     def refresh_token(self, user_name):
         token = self.get_token(user_name)
         if token:
-
-            # Refresh the token
             client = OAuth2Session(self.client_id, token=token, scope=self.scope)
             token = client.refresh_token(self.token_endpoint, client_secret=self.client_secret, client_id=self.client_id)
-            # Save the new token
             self.update_token(user_name, token)
-
             log.info('Token for user %s has been updated properly' % user_name)
             return token
         else:
