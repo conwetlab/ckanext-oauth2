@@ -8,8 +8,6 @@ from nose_parameterized import parameterized
 class PluginTest(unittest.TestCase):
 
     def setUp(self):
-        self._plugin = plugin.OAuth2Plugin()
-
         # Save functions and mock them
         self._config = plugin.config
         plugin.config = MagicMock()
@@ -22,6 +20,9 @@ class PluginTest(unittest.TestCase):
 
         self._db = plugin.db
         plugin.db = MagicMock()
+
+        # Create the plugin
+        self._plugin = plugin.OAuth2Plugin()
 
     def tearDown(self):
         # Unmock functions

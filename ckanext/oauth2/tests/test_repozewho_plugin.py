@@ -52,6 +52,7 @@ class OAuth2PluginTest(unittest.TestCase):
         oauth2_repozewho.OAuth2Session = self._OAuth2Session
 
     def _plugin(self, fullname_field=True, mail_field=True):
+        oauth2_repozewho.db = MagicMock()
         plugin = OAuth2Plugin(
             authorization_endpoint='https://test/oauth2/authorize/',
             token_endpoint='https://test/oauth2/token/',
@@ -75,6 +76,7 @@ class OAuth2PluginTest(unittest.TestCase):
         verifyClass(IChallenger, OAuth2Plugin)
 
     def test_make_plugin_all(self):
+        oauth2_repozewho.db = MagicMock()
         plugin = make_plugin(
             authorization_endpoint='https://test/oauth2/authorize/',
             token_endpoint='https://test/oauth2/token/',
