@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-import ckan.model as model
-import db
-import json
 import logging
 import ckanext.oauth2.repozewho as oauth2_repozewho
 
@@ -58,9 +55,6 @@ class OAuth2Plugin(plugins.SingletonPlugin):
         self.register_url = config.get('ckan.oauth2.register_url', None)
         self.reset_url = config.get('ckan.oauth2.reset_url', None)
         self.edit_url = config.get('ckan.oauth2.edit_url', None)
-
-        # Init db
-        db.init_db(model)
 
     def before_map(self, m):
         log.debug('Setting up the redirections to the OAuth2 service')

@@ -18,9 +18,6 @@ class PluginTest(unittest.TestCase):
         self._session = plugin.session
         plugin.session = MagicMock()
 
-        self._db = plugin.db
-        plugin.db = MagicMock()
-
         # Create the plugin
         self._plugin = plugin.OAuth2Plugin()
 
@@ -29,7 +26,6 @@ class PluginTest(unittest.TestCase):
         plugin.config = self._config
         plugin.toolkit = self._toolkit
         plugin.session = self._session
-        plugin.db = self._db
 
     def _set_identity(self, identity):
         if identity:
