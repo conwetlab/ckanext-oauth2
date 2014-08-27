@@ -424,13 +424,15 @@ class OAuth2PluginTest(unittest.TestCase):
         oauth2_repozewho.OAuth2Session = MagicMock(return_value=session)
 
         # Call the function
-        plugin.refresh_token(username)
+        result = plugin.refresh_token(username)
 
         if user_exists:
+            self.assertEquals(newtoken, result)
             oauth2_repozewho.OAuth2Session.assert_called_once_with(plugin.client_id, token=current_token, scope=plugin.scope)
             session.refresh_token.assert_called_once_with(plugin.token_endpoint, client_secret=plugin.client_secret, client_id=plugin.client_id)
             plugin.update_token.assert_called_once_with(username, newtoken)
         else:
+            self.assertIsNone(result)
             self.assertEquals(0, oauth2_repozewho.OAuth2Session.call_count)
             self.assertEquals(0, session.refresh_token.call_count)
             self.assertEquals(0, plugin.update_token.call_count)
