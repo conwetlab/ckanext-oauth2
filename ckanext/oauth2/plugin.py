@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 import logging
 import ckanext.oauth2.repozewho as oauth2_repozewho
 
+from functools import partial
 from pylons import config
 from ckan import plugins
 from ckan.common import session
@@ -49,7 +50,7 @@ class OAuth2Plugin(plugins.SingletonPlugin):
 
     def __init__(self, name=None):
         '''Store the OAuth 2 client configuration'''
-        log.debug('Init')
+        log.debug('Init OAuth2 extension')
         self.logout_url = config.get('ckan.oauth2.logout_url', '/user/logged_out')
         self.register_url = config.get('ckan.oauth2.register_url', None)
         self.reset_url = config.get('ckan.oauth2.reset_url', None)
@@ -82,12 +83,19 @@ class OAuth2Plugin(plugins.SingletonPlugin):
         # Create session if it does not exist. Workaround to show flash messages
         session.save()
 
+        def _refresh_and_save_token(user_name):
+            new_token = toolkit.request.environ['repoze.who.plugins']['oauth2'].refresh_token(user_name)
+            if new_token:
+                toolkit.c.usertoken = new_token
+
         log.debug('identify')
         environ = toolkit.request.environ
         if 'repoze.who.identity' in environ:
             repoze_userid = environ['repoze.who.identity']['repoze.who.userid']
             log.debug('User logged %r' % repoze_userid)
             toolkit.c.user = repoze_userid
+            toolkit.c.usertoken = toolkit.request.environ['repoze.who.plugins']['oauth2'].get_token(repoze_userid)
+            toolkit.c.usertoken_refresh = partial(_refresh_and_save_token, repoze_userid)
         else:
             log.warn('The user is not currently logged...')
 

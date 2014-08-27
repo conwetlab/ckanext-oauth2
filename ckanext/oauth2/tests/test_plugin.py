@@ -8,8 +8,6 @@ from nose_parameterized import parameterized
 class PluginTest(unittest.TestCase):
 
     def setUp(self):
-        self._plugin = plugin.OAuth2Plugin()
-
         # Save functions and mock them
         self._config = plugin.config
         plugin.config = MagicMock()
@@ -19,6 +17,9 @@ class PluginTest(unittest.TestCase):
 
         self._session = plugin.session
         plugin.session = MagicMock()
+
+        # Create the plugin
+        self._plugin = plugin.OAuth2Plugin()
 
     def tearDown(self):
         # Unmock functions
@@ -96,14 +97,48 @@ class PluginTest(unittest.TestCase):
 
         self._set_identity(identity)
 
+        usertoken = {
+            'access_token': 'current_access_token',
+            'refresh_token': 'current_refresh_token',
+            'token_type': 'current_token_type',
+            'expires_in': '2678399'
+        }
+        newtoken = {
+            'access_token': 'new_access_token',
+            'refresh_token': 'new_refresh_token',
+            'token_type': 'new_token_type',
+            'expires_in': '3600'
+        }
+
+        oauth2Plugin = MagicMock()
+        oauth2Plugin.get_token = MagicMock(return_value=usertoken)
+        oauth2Plugin.refresh_token = MagicMock(return_value=newtoken)
+
+        plugin.toolkit.request.environ['repoze.who.plugins'] = {
+            'oauth2': oauth2Plugin
+        }
+
         # The identify function must set the user id in this variable
         plugin.toolkit.c.user = None
+        plugin.toolkit.c.usertoken = None
+        plugin.toolkit.c.usertoken_refresh = None
 
         # Call the function
         self._plugin.identify()
 
         self.assertEquals(identity, plugin.toolkit.c.user)
         plugin.session.save.assert_called_once()
+
+        if identity is None:
+            self.assertIsNone(plugin.toolkit.c.usertoken)
+            self.assertIsNone(plugin.toolkit.c.usertoken_refresh)
+        else:
+            self.assertEquals(usertoken, plugin.toolkit.c.usertoken)
+
+            # method 'usertoken_refresh' shpuld relay on the one provided by the repoze.who module
+            plugin.toolkit.c.usertoken_refresh()
+            plugin.toolkit.request.environ['repoze.who.plugins']['oauth2'].refresh_token.assert_called_once_with(identity)
+            self.assertEquals(newtoken, plugin.toolkit.c.usertoken)
 
     @parameterized.expand([
         (),
