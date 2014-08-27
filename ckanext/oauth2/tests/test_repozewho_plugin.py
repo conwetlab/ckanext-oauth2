@@ -360,9 +360,11 @@ class OAuth2PluginTest(unittest.TestCase):
     ])
     def test_update_token(self, user_exists):
         plugin = self._plugin()
+        user = 'user'
 
         if user_exists:
             usertoken = MagicMock()
+            usertoken.user_name = user
             usertoken.access_token = OAUTH2TOKEN['access_token']
             usertoken.token_type = OAUTH2TOKEN['token_type']
             usertoken.expires_in = OAUTH2TOKEN['expires_in']
@@ -390,6 +392,7 @@ class OAuth2PluginTest(unittest.TestCase):
 
         # Check that the object contains the correct information
         tk = oauth2_repozewho.model.Session.add.call_args_list[0][0][0]
+        self.assertEquals(user, tk.user_name)
         self.assertEquals(newtoken['access_token'], tk.access_token)
         self.assertEquals(newtoken['token_type'], tk.token_type)
         self.assertEquals(newtoken['expires_in'], tk.expires_in)

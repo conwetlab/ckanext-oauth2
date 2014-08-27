@@ -97,17 +97,18 @@ class PluginTest(unittest.TestCase):
 
         self._set_identity(identity)
 
-        usertoken = MagicMock()
-        usertoken.access_token = 'sdkfdsofdsi'
-        usertoken.refresh_token = 'djshfajiywer'
-        usertoken.token_type = 'bearer'
-        usertoken.expires_in = '2678399'
-
-        newtoken = MagicMock()
-        newtoken.access_token = 'sdkfdsofdsi'
-        newtoken.refresh_token = 'djshfajiywer'
-        newtoken.token_type = 'bearer'
-        newtoken.expires_in = '2678399'
+        usertoken = {
+            'access_token': 'current_access_token',
+            'refresh_token': 'current_refresh_token',
+            'token_type': 'current_token_type',
+            'expires_in': '2678399'
+        }
+        newtoken = {
+            'access_token': 'new_access_token',
+            'refresh_token': 'new_refresh_token',
+            'token_type': 'new_token_type',
+            'expires_in': '3600'
+        }
 
         oauth2Plugin = MagicMock()
         oauth2Plugin.get_token = MagicMock(return_value=usertoken)
