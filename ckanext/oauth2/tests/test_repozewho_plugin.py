@@ -51,6 +51,10 @@ class OAuth2PluginTest(unittest.TestCase):
         oauth2_repozewho.db = self._db
         oauth2_repozewho.OAuth2Session = self._OAuth2Session
 
+        # Recover the function since it'll be mocked in a test...
+        if getattr(self, 'plugin', None) is not None and getattr(self, '_update_token', None) is not None:
+            self.plugin.update_token = self._update_token
+
     def _plugin(self, fullname_field=True, mail_field=True):
         oauth2_repozewho.db = MagicMock()
         plugin = OAuth2Plugin(
@@ -234,7 +238,8 @@ class OAuth2PluginTest(unittest.TestCase):
     def test_authenticate(self, username, fullname=None, email=None, user_exists=True,
                           fullname_field=True, email_field=True, came_from='/'):
 
-        plugin = self._plugin(fullname_field, email_field)
+        self.plugin = plugin = self._plugin(fullname_field, email_field)
+        self._update_token = plugin.update_token
         plugin.update_token = MagicMock()   # Mock the function. It'll be tested separately
 
         # Simulate the HTTP Request
