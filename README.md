@@ -3,7 +3,7 @@ OAuth2 CKAN extension  [![Build Status](http://hercules.ls.fi.upm.es/jenkins/bui
 
 The OAuth2 extension allows site visitors to login through an OAuth2 server.
 
-NOTE: This extension has been tested in ckan 2.2. It may not work in other versions.
+**Note**: This extension has been tested in ckan 2.2. It may not work in other versions.
 
 
 Links
