@@ -159,20 +159,28 @@ class OAuth2Plugin(object):
             oauth = OAuth2Session(self.client_id, token=identity['oauth2.token'])
             profile_response = oauth.get(self.profile_api_url)
             user_data = profile_response.json()
-            user_name = user_data[self.profile_api_user_field]
-            user = model.User.by_name(user_name)
+            email = user_data[self.profile_api_mail_field]          # WARN: profile_api_mail_field should be defined!!
+            user_name = user_data[self.profile_api_user_field]      # WARN: profile_api_user_field should be defined!!
+            user = None
+            users = model.User.by_email(email)  # It returns a list of users (since it can exist some users with the same email...)
+            if len(users) == 1:                 # In the Fi-Ware case this problem does not exist since all the users have different mails...
+                user = users[0]
 
+            # If the user does not exist, we have to create it...
             if user is None:
-                # If the user does not exist, it's created
-                user = model.User(name=user_name)
+                user = model.User(email=email)
+
+            # Now we update his/her user_name with the one provided by the OAuth2 service
+            # In the future, users will be obtained based on this field
+            user.name = user_name
 
             # Update fullname
             if self.profile_api_fullname_field and self.profile_api_fullname_field in user_data:
                 user.fullname = user_data[self.profile_api_fullname_field]
 
             # Update mail
-            if self.profile_api_mail_field and self.profile_api_mail_field in user_data:
-                user.email = user_data[self.profile_api_mail_field]
+            # if self.profile_api_mail_field and self.profile_api_mail_field in user_data:
+            #     user.email = user_data[self.profile_api_mail_field]
 
             # Update token
             self.update_token(user_name, identity['oauth2.token'])
