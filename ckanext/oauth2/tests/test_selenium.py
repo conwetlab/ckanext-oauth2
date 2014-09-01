@@ -77,6 +77,12 @@ class BasicLoginDifferentReferer(unittest.TestCase):
         driver.find_element_by_name("cancel").click()
         assert driver.find_element_by_xpath("//div/div/div/div").text.startswith("The end-user or authorization server denied the request.")
 
+    def test_register_btn(self):
+        driver = self.driver
+        driver.get(self.base_url)
+        driver.find_element_by_link_text("Register").click()
+        self.assertEqual("https://account.lab.fi-ware.org/users/sign_up", driver.current_url)
+
     @parameterized.expand([
         ("user/register", "https://account.lab.fi-ware.org/users/sign_up"),
         ("user/reset", "https://account.lab.fi-ware.org/users/password/new")
