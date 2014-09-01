@@ -47,6 +47,7 @@ class OAuth2Plugin(plugins.SingletonPlugin):
     plugins.implements(plugins.IAuthenticator, inherit=True)
     plugins.implements(plugins.IAuthFunctions, inherit=True)
     plugins.implements(plugins.IRoutes, inherit=True)
+    plugins.implements(plugins.IConfigurer)
 
     def __init__(self, name=None):
         '''Store the OAuth 2 client configuration'''
@@ -131,3 +132,8 @@ class OAuth2Plugin(plugins.SingletonPlugin):
             'user_reset': user_reset,
             'request_reset': request_reset,
         }
+
+    def update_config(self, config):
+        # Add this plugin's templates dir to CKAN's extra_template_paths, so
+        # that CKAN will use this plugin's custom templates.
+        plugins.toolkit.add_template_directory(config, 'templates')
