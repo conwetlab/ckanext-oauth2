@@ -1,4 +1,22 @@
 # -*- coding: utf-8 -*-
+
+# Copyright (c) 2014 CoNWeT Lab., Universidad Politécnica de Madrid
+
+# This file is part of OAuth2 CKAN Extension.
+
+# OAuth2 CKAN Extension is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# OAuth2 CKAN Extension is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+
+# You should have received a copy of the GNU Affero General Public License
+# along with OAuth2 CKAN Extension.  If not, see <http://www.gnu.org/licenses/>.
+
 from __future__ import unicode_literals
 
 import logging
@@ -47,6 +65,7 @@ class OAuth2Plugin(plugins.SingletonPlugin):
     plugins.implements(plugins.IAuthenticator, inherit=True)
     plugins.implements(plugins.IAuthFunctions, inherit=True)
     plugins.implements(plugins.IRoutes, inherit=True)
+    plugins.implements(plugins.IConfigurer)
 
     def __init__(self, name=None):
         '''Store the OAuth 2 client configuration'''
@@ -131,3 +150,8 @@ class OAuth2Plugin(plugins.SingletonPlugin):
             'user_reset': user_reset,
             'request_reset': request_reset,
         }
+
+    def update_config(self, config):
+        # Add this plugin's templates dir to CKAN's extra_template_paths, so
+        # that CKAN will use this plugin's custom templates.
+        plugins.toolkit.add_template_directory(config, 'templates')

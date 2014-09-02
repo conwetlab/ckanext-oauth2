@@ -1,3 +1,22 @@
+# -*- coding: utf-8 -*-
+
+# Copyright (c) 2014 CoNWeT Lab., Universidad Politécnica de Madrid
+
+# This file is part of OAuth2 CKAN Extension.
+
+# OAuth2 CKAN Extension is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# OAuth2 CKAN Extension is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+
+# You should have received a copy of the GNU Affero General Public License
+# along with OAuth2 CKAN Extension.  If not, see <http://www.gnu.org/licenses/>.
+
 import unittest
 import os
 import time
@@ -76,6 +95,12 @@ class BasicLoginDifferentReferer(unittest.TestCase):
         driver.find_element_by_name("commit").click()
         driver.find_element_by_name("cancel").click()
         assert driver.find_element_by_xpath("//div/div/div/div").text.startswith("The end-user or authorization server denied the request.")
+
+    def test_register_btn(self):
+        driver = self.driver
+        driver.get(self.base_url)
+        driver.find_element_by_link_text("Register").click()
+        self.assertEqual("https://account.lab.fi-ware.org/users/sign_up", driver.current_url)
 
     @parameterized.expand([
         ("user/register", "https://account.lab.fi-ware.org/users/sign_up"),
