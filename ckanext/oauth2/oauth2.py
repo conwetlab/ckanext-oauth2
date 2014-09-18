@@ -140,7 +140,6 @@ class OAuth2Helper(object):
 
     def _get_rememberer(self, environ):
         plugins = environ.get('repoze.who.plugins', {})
-        print plugins
         return plugins.get(self.rememberer_name)
 
     def remember(self, identity):
@@ -150,7 +149,6 @@ class OAuth2Helper(object):
         This method simply delegates to another IIdentifier plugin if configured.
         '''
         log.debug('Repoze OAuth remember')
-        print identity
         environ = toolkit.request.environ
         rememberer = self._get_rememberer(environ)
         headers = rememberer.remember(environ, identity)
