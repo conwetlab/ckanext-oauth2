@@ -19,7 +19,6 @@
 
 from __future__ import unicode_literals
 
-import ckanext.oauth2.repozewho as oauth2_repozewho
 import logging
 import oauth2
 
