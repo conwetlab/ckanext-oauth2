@@ -65,7 +65,10 @@ class OAuth2Helper(object):
         # Init db
         db.init_db(model)
 
-        # FIXME: Check missing parameters
+        if not self.authorization_endpoint or not self.token_endpoint or not self.client_id or not self.client_secret \
+                or not self.profile_api_url or not self.profile_api_user_field:
+            raise ValueError('authorization_endpoint, token_endpoint, client_id, client_secret parameters, '
+                             'profile_api_url and profile_api_user_field are required')
 
     def _redirect_uri(self, request):
         return ''.join([request.host_url, REDIRECT_URL])
@@ -93,7 +96,7 @@ class OAuth2Helper(object):
         toolkit.response.location = auth_url
         log.debug('Challenge: Redirecting challenge to page {0}'.format(auth_url))
 
-    def get_token(self):
+    def identify(self):
         try:
             state = toolkit.request.params.get('state')
             came_from = get_came_from(state)
@@ -106,7 +109,7 @@ class OAuth2Helper(object):
         except Exception:
             return None
 
-    def identify(self, identity):
+    def authenticate(self, identity):
         if 'oauth2.token' in identity:
             oauth = OAuth2Session(self.client_id, token=identity['oauth2.token'])
             profile_response = oauth.get(self.profile_api_url)
@@ -166,7 +169,7 @@ class OAuth2Helper(object):
         toolkit.response.status = 302
         toolkit.response.location = came_from
 
-    def get_stored_token(self, user_name):
+    def get_token(self, user_name):
         user_token = db.UserToken.by_user_name(user_name=user_name)
         if user_token:
             return {

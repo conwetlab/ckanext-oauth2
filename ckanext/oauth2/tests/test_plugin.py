@@ -132,7 +132,7 @@ class PluginTest(unittest.TestCase):
             'expires_in': '3600'
         }
 
-        plugin.oauth2.OAuth2Helper.return_value.get_stored_token = MagicMock(return_value=usertoken)
+        plugin.oauth2.OAuth2Helper.return_value.get_token = MagicMock(return_value=usertoken)
         plugin.oauth2.OAuth2Helper.return_value.refresh_token = MagicMock(return_value=newtoken)
 
         # The identify function must set the user id in this variable

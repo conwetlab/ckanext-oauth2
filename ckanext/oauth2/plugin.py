@@ -116,7 +116,7 @@ class OAuth2Plugin(plugins.SingletonPlugin):
             repoze_userid = environ['repoze.who.identity']['repoze.who.userid']
             log.debug('User logged %r' % repoze_userid)
             toolkit.c.user = repoze_userid
-            toolkit.c.usertoken = self.oauth2helper.get_stored_token(repoze_userid)
+            toolkit.c.usertoken = self.oauth2helper.get_token(repoze_userid)
             toolkit.c.usertoken_refresh = partial(_refresh_and_save_token, repoze_userid)
         else:
             log.warn('The user is not currently logged...')

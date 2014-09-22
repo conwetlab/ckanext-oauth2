@@ -36,8 +36,8 @@ class OAuth2Controller(base.BaseController):
 
     def callback(self):
         try:
-            token = self.oauth2helper.get_token()
-            identity = self.oauth2helper.identify(token)
+            token = self.oauth2helper.identify()
+            identity = self.oauth2helper.authenticate(token)
             user_name = identity['repoze.who.userid']
             self.oauth2helper.remember(identity)
             self.oauth2helper.update_token(user_name, token['oauth2.token'])

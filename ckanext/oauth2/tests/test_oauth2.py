@@ -106,15 +106,15 @@ class OAuth2PluginTest(unittest.TestCase):
 
         return helper
 
-    def test_get_token_with_no_credentials(self):
+    def test_identify_with_no_credentials(self):
         oauth2.toolkit = MagicMock()
         oauth2.toolkit.request = make_request(True, 'data.com', 'callback', {})
         helper = self._helper()
-        identity = helper.get_token()
+        identity = helper.identify()
         self.assertEquals(identity, None)
 
     @httpretty.activate
-    def test_get_token(self):
+    def test_identify(self):
         oauth2.toolkit = MagicMock()
         helper = self._helper()
         token = OAUTH2TOKEN
@@ -122,7 +122,7 @@ class OAuth2PluginTest(unittest.TestCase):
 
         state = b64encode(json.dumps({'came_from': 'initial-page'}))
         oauth2.toolkit.request = make_request(True, 'data.com', 'callback', {'state': state, 'code': 'code'})
-        identity = helper.get_token()
+        identity = helper.identify()
         self.assertIn('oauth2.token', identity)
 
         for key in token:
@@ -133,7 +133,7 @@ class OAuth2PluginTest(unittest.TestCase):
         self.assertEquals(identity['came_from'], 'initial-page')
 
     @httpretty.activate
-    def test_get_token_insecure(self):
+    def test_identify_insecure(self):
         oauth2.toolkit = MagicMock()
         helper = self._helper()
         token = OAUTH2TOKEN
@@ -141,7 +141,7 @@ class OAuth2PluginTest(unittest.TestCase):
 
         state = b64encode(json.dumps({'came_from': 'initial-page'}))
         oauth2.toolkit.request = make_request(False, 'data.com', 'callback', {'state': state, 'code': 'code'})
-        result = helper.get_token()
+        result = helper.identify()
         self.assertEquals(None, result)
 
     @httpretty.activate
@@ -156,16 +156,22 @@ class OAuth2PluginTest(unittest.TestCase):
 
         state = b64encode(json.dumps({'came_from': 'initial-page'}))
         oauth2.toolkit.request = make_request(True, 'data.com', 'callback', {'state': state, 'code': 'code'})
-        result = helper.get_token()
+        result = helper.identify()
         self.assertEquals(None, result)
 
-    def test_remember(self):
+    @parameterized.expand([
+        ({},),
+        ([('Set-Cookie', 'cookie1="cookie1val"; Path=/')],),
+        ([('Set-Cookie', 'cookie1="cookie1val"; Path=/'), ('Set-Cookie', 'cookie12="cookie2val"; Path=/')],)
+    ])
+    def test_remember(self, headers):
         # Configure the mocks
         oauth2.toolkit = MagicMock()
         environ = MagicMock()
         plugins = MagicMock()
         identity = MagicMock()
         authenticator = MagicMock()
+        authenticator.remember = MagicMock(return_value=headers)
 
         environ.get = MagicMock(return_value=plugins)
         oauth2.toolkit.request.environ = environ
@@ -177,6 +183,9 @@ class OAuth2PluginTest(unittest.TestCase):
 
         # Check that the remember method has been called properly
         authenticator.remember.assert_called_once_with(environ, identity)
+
+        for header, value in headers:
+            oauth2.toolkit.response.headers.add.assert_any_call(header, value)
 
     @parameterized.expand([
         (True, '/'),
@@ -233,8 +242,8 @@ class OAuth2PluginTest(unittest.TestCase):
 
     ])
     @httpretty.activate
-    def test_identify(self, username, fullname=None, email=None, user_exists=True,
-                      fullname_field=True, email_field=True):
+    def test_authenticate(self, username, fullname=None, email=None, user_exists=True,
+                          fullname_field=True, email_field=True):
 
         self.helper = helper = self._helper(fullname_field, email_field)
 
@@ -267,7 +276,7 @@ class OAuth2PluginTest(unittest.TestCase):
         identity['oauth2.token'] = OAUTH2TOKEN
 
         # Call the function
-        helper.identify(identity)
+        helper.authenticate(identity)
 
         # Asserts
         oauth2.model.User.by_name.assert_called_once_with(username)
@@ -299,7 +308,7 @@ class OAuth2PluginTest(unittest.TestCase):
         self.assertEquals(username, identity['repoze.who.userid'])
 
     @httpretty.activate
-    def test_identify_invalid_token(self):
+    def test_authenticate_invalid_token(self):
 
         helper = self._helper()
         user_info = {'error': 'invalid_token', 'error_description': 'error_description'}
@@ -309,15 +318,15 @@ class OAuth2PluginTest(unittest.TestCase):
         httpretty.register_uri(httpretty.GET, self._profile_api_url, status=401, body=json.dumps(user_info))
 
         with self.assertRaises(ValueError):
-            helper.identify(identity)
+            helper.authenticate(identity)
 
-    def test_identify_no_token(self):
-        self.assertEquals(None, self._helper().identify({}))
+    def test_authenticate_no_token(self):
+        self.assertEquals(None, self._helper().authenticate({}))
 
     def test_get_token_non_existing_user(self):
         helper = self._helper()
         oauth2.db.UserToken.by_user_name = MagicMock(return_value=None)
-        self.assertIsNone(helper.get_stored_token('user'))
+        self.assertIsNone(helper.get_token('user'))
 
     def test_get_token_existing_user(self):
         helper = self._helper()
@@ -329,7 +338,20 @@ class OAuth2PluginTest(unittest.TestCase):
         usertoken.refresh_token = OAUTH2TOKEN['refresh_token']
 
         oauth2.db.UserToken.by_user_name = MagicMock(return_value=usertoken)
-        self.assertEquals(OAUTH2TOKEN, helper.get_stored_token('user'))
+        self.assertEquals(OAUTH2TOKEN, helper.get_token('user'))
+
+    @parameterized.expand([
+        ({'came_from': 'http://localhost/dataset'}, ),
+        ({},)
+    ])
+    def test_redirect_from_callback(self, identity):
+        oauth2.toolkit = MagicMock()
+        helper = self._helper()
+        helper.redirect_from_callback(identity)
+
+        expected_url = oauth2.INITIAL_PAGE if 'came_from' not in identity else identity['came_from']
+        self.assertEquals(302, oauth2.toolkit.response.status)
+        self.assertEquals(expected_url, oauth2.toolkit.response.location)
 
     @parameterized.expand([
         (True,),

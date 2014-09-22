@@ -63,14 +63,14 @@ class OAuth2PluginTest(unittest.TestCase):
 
         token = {'oauth2.token': 'TOKEN'}
         identity = {'repoze.who.userid': 'user_id'}
-        oauth2Helper.get_token.return_value = token
-        oauth2Helper.identify.return_value = identity
+        oauth2Helper.identify.return_value = token
+        oauth2Helper.authenticate.return_value = identity
 
         # Call the controller
         self.controller.callback()
 
-        oauth2Helper.get_token.assert_called_once()
-        oauth2Helper.identify.assert_called_once_with(token)
+        oauth2Helper.identify.assert_called_once()
+        oauth2Helper.authenticate.assert_called_once_with(token)
         oauth2Helper.remember.assert_called_once_with(identity)
         oauth2Helper.update_token.assert_called_once_with(identity['repoze.who.userid'], token['oauth2.token'])
         oauth2Helper.redirect_from_callback.assert_called_once_with(identity)
@@ -86,7 +86,7 @@ class OAuth2PluginTest(unittest.TestCase):
         controller.oauth2.get_came_from = self._oauth2.get_came_from
 
         oauth2Helper = controller.oauth2.OAuth2Helper.return_value
-        oauth2Helper.get_token.side_effect = Exception(EXCEPTION_MSG)
+        oauth2Helper.identify.side_effect = Exception(EXCEPTION_MSG)
 
         controller.toolkit.request.GET = {}
         controller.toolkit.request.GET['state'] = self.generate_state(came_from)
