@@ -82,7 +82,7 @@ class OAuth2Plugin(plugins.SingletonPlugin):
 
         # We need to handle petitions received to the Callback URL
         # since some error can arise and we need to process them
-        m.connect(oauth2_repozewho.REDIRECT_URL,
+        m.connect('/oauth2/callback',
                   controller='ckanext.oauth2.controller:OAuth2Controller',
                   action='callback')
 
