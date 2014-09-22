@@ -27,6 +27,7 @@ from base64 import b64encode
 from ckanext.oauth2.oauth2 import OAuth2Helper
 from mock import MagicMock
 from nose_parameterized import parameterized
+from oauthlib.oauth2 import InsecureTransportError, MissingCodeError, MissingTokenError
 from urllib import urlencode
 
 OAUTH2TOKEN = {
@@ -108,10 +109,13 @@ class OAuth2PluginTest(unittest.TestCase):
 
     def test_identify_with_no_credentials(self):
         oauth2.toolkit = MagicMock()
-        oauth2.toolkit.request = make_request(True, 'data.com', 'callback', {})
+        state = b64encode(json.dumps({'came_from': 'initial-page'}))
+        oauth2.toolkit.request = make_request(True, 'data.com', 'callback', {'state': state})
+
         helper = self._helper()
-        identity = helper.identify()
-        self.assertEquals(identity, None)
+        
+        with self.assertRaises(MissingCodeError):
+            helper.identify()
 
     @httpretty.activate
     def test_identify(self):
@@ -141,8 +145,9 @@ class OAuth2PluginTest(unittest.TestCase):
 
         state = b64encode(json.dumps({'came_from': 'initial-page'}))
         oauth2.toolkit.request = make_request(False, 'data.com', 'callback', {'state': state, 'code': 'code'})
-        result = helper.identify()
-        self.assertEquals(None, result)
+
+        with self.assertRaises(InsecureTransportError):
+            helper.identify()
 
     @httpretty.activate
     def test_identify_error(self):
@@ -156,8 +161,9 @@ class OAuth2PluginTest(unittest.TestCase):
 
         state = b64encode(json.dumps({'came_from': 'initial-page'}))
         oauth2.toolkit.request = make_request(True, 'data.com', 'callback', {'state': state, 'code': 'code'})
-        result = helper.identify()
-        self.assertEquals(None, result)
+
+        with self.assertRaises(MissingTokenError):
+            helper.identify()
 
     @parameterized.expand([
         ({},),
@@ -332,7 +338,8 @@ class OAuth2PluginTest(unittest.TestCase):
         self.assertTrue(exception_risen)
 
     def test_authenticate_no_token(self):
-        self.assertEquals(None, self._helper().authenticate({}))
+        with self.assertRaises(ValueError):
+            self._helper().authenticate({})
 
     def test_get_token_non_existing_user(self):
         helper = self._helper()

@@ -67,15 +67,14 @@ class OAuth2Helper(object):
 
         if not self.authorization_endpoint or not self.token_endpoint or not self.client_id or not self.client_secret \
                 or not self.profile_api_url or not self.profile_api_user_field:
-            raise ValueError('authorization_endpoint, token_endpoint, client_id, client_secret parameters, '
+            raise ValueError('authorization_endpoint, token_endpoint, client_id, client_secret, '
                              'profile_api_url and profile_api_user_field are required')
 
     def _redirect_uri(self, request):
         return ''.join([request.host_url, REDIRECT_URL])
 
     def challenge(self):
-        # Only log the user when s/he tries to log in. Otherwise, the user will
-        # be redirected to the main page where an error will be shown
+        # This function is called by the log in function when the user is not logged in
         came_from_url = toolkit.request.headers.get('Referer', INITIAL_PAGE)
         came_from_url_parsed = urlparse(came_from_url)
 
@@ -97,23 +96,21 @@ class OAuth2Helper(object):
         log.debug('Challenge: Redirecting challenge to page {0}'.format(auth_url))
 
     def identify(self):
-        try:
-            state = toolkit.request.params.get('state')
-            came_from = get_came_from(state)
-            oauth = OAuth2Session(self.client_id, redirect_uri=self._redirect_uri(toolkit.request), scope=self.scope)
-            token = oauth.fetch_token(self.token_endpoint,
-                                      client_secret=self.client_secret,
-                                      authorization_response=toolkit.request.url)
+        state = toolkit.request.params.get('state')
+        came_from = get_came_from(state)
+        oauth = OAuth2Session(self.client_id, redirect_uri=self._redirect_uri(toolkit.request), scope=self.scope)
+        token = oauth.fetch_token(self.token_endpoint,
+                                  client_secret=self.client_secret,
+                                  authorization_response=toolkit.request.url)
 
-            return {'oauth2.token': token, CAME_FROM_FIELD: came_from}
-        except Exception:
-            return None
+        return {'oauth2.token': token, CAME_FROM_FIELD: came_from}
 
     def authenticate(self, identity):
         if 'oauth2.token' in identity:
             oauth = OAuth2Session(self.client_id, token=identity['oauth2.token'])
             profile_response = oauth.get(self.profile_api_url)
 
+            # Token can be invalid
             if not profile_response.ok:
                 error = profile_response.json()
                 if error.get('error', '') == 'invalid_token':
@@ -144,7 +141,8 @@ class OAuth2Helper(object):
 
                 identity.update({'repoze.who.userid': user.name})
                 return identity
-        return None
+        else:
+            raise ValueError('oauth2.token not found in identity')
 
     def _get_rememberer(self, environ):
         plugins = environ.get('repoze.who.plugins', {})
@@ -164,7 +162,7 @@ class OAuth2Helper(object):
             toolkit.response.headers.add(header, value)
 
     def redirect_from_callback(self, identity):
-        '''Redirect from the callback URL after a successful authentication.'''
+        '''Redirect to the callback URL after a successful authentication.'''
         came_from = identity.get(CAME_FROM_FIELD, INITIAL_PAGE)
         toolkit.response.status = 302
         toolkit.response.location = came_from

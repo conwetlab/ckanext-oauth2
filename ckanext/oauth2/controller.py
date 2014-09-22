@@ -43,10 +43,18 @@ class OAuth2Controller(base.BaseController):
             self.oauth2helper.update_token(user_name, token['oauth2.token'])
             self.oauth2helper.redirect_from_callback(identity)
         except Exception as e:
+
             # If the callback is called with an error, we must show the message
             error_description = toolkit.request.GET.get('error_description')
             if not error_description:
-                error_description = e.message
+                if e.message:
+                    error_description = e.message
+                elif e.description:
+                    error_description = e.description
+                elif e.error:
+                    error_description = e.error
+                else:
+                    error_description = type(e).__name__
 
             toolkit.response.status_int = 302
             redirect_url = oauth2.get_came_from(toolkit.request.params.get('state'))
