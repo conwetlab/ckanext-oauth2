@@ -20,7 +20,7 @@
 import unittest
 import ckanext.oauth2.plugin as plugin
 
-from mock import MagicMock, ANY
+from mock import MagicMock
 from nose_parameterized import parameterized
 
 
@@ -36,6 +36,9 @@ class PluginTest(unittest.TestCase):
 
         self._session = plugin.session
         plugin.session = MagicMock()
+
+        self._oauth2 = plugin.oauth2
+        plugin.oauth2 = MagicMock()
 
         # Create the plugin
         self._plugin = plugin.OAuth2Plugin()
@@ -129,13 +132,8 @@ class PluginTest(unittest.TestCase):
             'expires_in': '3600'
         }
 
-        oauth2Plugin = MagicMock()
-        oauth2Plugin.get_token = MagicMock(return_value=usertoken)
-        oauth2Plugin.refresh_token = MagicMock(return_value=newtoken)
-
-        plugin.toolkit.request.environ['repoze.who.plugins'] = {
-            'oauth2': oauth2Plugin
-        }
+        plugin.oauth2.OAuth2Helper.return_value.get_stored_token = MagicMock(return_value=usertoken)
+        plugin.oauth2.OAuth2Helper.return_value.refresh_token = MagicMock(return_value=newtoken)
 
         # The identify function must set the user id in this variable
         plugin.toolkit.c.user = None
@@ -154,9 +152,9 @@ class PluginTest(unittest.TestCase):
         else:
             self.assertEquals(usertoken, plugin.toolkit.c.usertoken)
 
-            # method 'usertoken_refresh' shpuld relay on the one provided by the repoze.who module
+            # method 'usertoken_refresh' should relay on the one provided by the repoze.who module
             plugin.toolkit.c.usertoken_refresh()
-            plugin.toolkit.request.environ['repoze.who.plugins']['oauth2'].refresh_token.assert_called_once_with(identity)
+            plugin.oauth2.OAuth2Helper.return_value.refresh_token.assert_called_once_with(identity)
             self.assertEquals(newtoken, plugin.toolkit.c.usertoken)
 
     @parameterized.expand([
@@ -179,49 +177,7 @@ class PluginTest(unittest.TestCase):
         self._plugin.login()
 
         if not user:
-            plugin.toolkit.abort.assert_called_once_with(401)
+            plugin.oauth2.OAuth2Helper.return_value.challenge.assert_called_once_with()
         else:
             self.assertEquals(0, plugin.toolkit.abort.call_count)
             plugin.toolkit.redirect_to.assert_called_with(bytes(expected_referer))
-
-    @parameterized.expand([
-        (),
-        ('test'),
-        (None, '/about'),
-        ('test', '/about')
-    ])
-    def test_logout(self, identity=None, logout_url=None):
-
-        self._set_identity(identity)
-        expected_logout_url = '/user/logged_out' if logout_url is None else logout_url
-
-        plugin.config = {}
-        if logout_url:
-            plugin.config['ckan.oauth2.logout_url'] = logout_url
-
-        # The plugin needs to be recreated
-        self._plugin = plugin.OAuth2Plugin()
-
-        # Generate the plugins
-        validPlugin = MagicMock()
-        validPlugin.forget = MagicMock(return_value=[('head1', 'val1'), ('head2', 'val2')])
-        invalidPlugin = MagicMock()
-        del invalidPlugin.forget
-
-        # Put the plugins in the environ that is read by the function
-        plugin.toolkit.request.environ['repoze.who.plugins'] = {}
-        plugin.toolkit.request.environ['repoze.who.plugins']['pluginA'] = validPlugin
-        plugin.toolkit.request.environ['repoze.who.plugins']['pluginB'] = invalidPlugin
-
-        # Call the function
-        self._plugin.logout()
-
-        if identity:
-            # Chech that the function forget of the plugin is called
-            validPlugin.forget(plugin.toolkit.request.environ, identity)
-
-            #Check that all the headers are set in the response
-            for head, value in validPlugin.forget.return_value:
-                plugin.toolkit.response.headers.add.assert_any_call(head, value)
-
-        plugin.toolkit.redirect_to.assert_called_with(bytes(expected_logout_url), locale=ANY)

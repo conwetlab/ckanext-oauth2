@@ -56,7 +56,7 @@ class OAuth2Helper(object):
         self.profile_api_url = config.get('ckan.oauth2.profile_api_url', None)
         self.client_id = config.get('ckan.oauth2.client_id', None)
         self.client_secret = config.get('ckan.oauth2.client_secret', None)
-        self.scope = config.get('ckan.oauth2.scope', None).decode()
+        self.scope = config.get('ckan.oauth2.scope', '').decode()
         self.rememberer_name = config.get('ckan.oauth2.rememberer_name', None)
         self.profile_api_user_field = config.get('ckan.oauth2.profile_api_user_field', None)
         self.profile_api_fullname_field = config.get('ckan.oauth2.profile_api_fullname_field', None)
@@ -65,10 +65,12 @@ class OAuth2Helper(object):
         # Init db
         db.init_db(model)
 
+        # FIXME: Check missing parameters
+
     def _redirect_uri(self, request):
         return ''.join([request.host_url, REDIRECT_URL])
 
-    def challange(self):
+    def challenge(self):
         # Only log the user when s/he tries to log in. Otherwise, the user will
         # be redirected to the main page where an error will be shown
         came_from_url = toolkit.request.headers.get('Referer', INITIAL_PAGE)
@@ -92,14 +94,17 @@ class OAuth2Helper(object):
         log.debug('Challenge: Redirecting challenge to page {0}'.format(auth_url))
 
     def get_token(self):
-        state = toolkit.request.params.get('state')
-        came_from = get_came_from(state)
-        oauth = OAuth2Session(self.client_id, redirect_uri=self._redirect_uri(toolkit.request), scope=self.scope)
-        token = oauth.fetch_token(self.token_endpoint,
-                                  client_secret=self.client_secret,
-                                  authorization_response=toolkit.request.url)
+        try:
+            state = toolkit.request.params.get('state')
+            came_from = get_came_from(state)
+            oauth = OAuth2Session(self.client_id, redirect_uri=self._redirect_uri(toolkit.request), scope=self.scope)
+            token = oauth.fetch_token(self.token_endpoint,
+                                      client_secret=self.client_secret,
+                                      authorization_response=toolkit.request.url)
 
-        return {'oauth2.token': token, CAME_FROM_FIELD: came_from}
+            return {'oauth2.token': token, CAME_FROM_FIELD: came_from}
+        except Exception:
+            return None
 
     def identify(self, identity):
         if 'oauth2.token' in identity:

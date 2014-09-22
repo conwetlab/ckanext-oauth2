@@ -126,7 +126,7 @@ class OAuth2Plugin(plugins.SingletonPlugin):
         log.debug('login')
         
         if not toolkit.c.user:
-            self.oauth2helper.challange()
+            self.oauth2helper.challenge()
         else:
             redirect_to = toolkit.request.headers.get('Referer', '/')
             toolkit.redirect_to(bytes(redirect_to))

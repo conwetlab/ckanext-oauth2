@@ -23,7 +23,8 @@ import oauth2
 import ckan.lib.helpers as helpers
 import ckan.lib.base as base
 
-from ckan.common import request, response
+from ckanext.oauth2.plugin import toolkit
+
 
 log = logging.getLogger(__name__)
 
@@ -34,13 +35,6 @@ class OAuth2Controller(base.BaseController):
         self.oauth2helper = oauth2.OAuth2Helper()
 
     def callback(self):
-        '''
-        If the callback is called properly, this function won't be executed.
-        This function is only executed when an error arises login the user in
-        the OAuth2 Server (i.e.: a user doesn't allow the application to access
-        their data, the application is not running over HTTPs,...)
-        '''
-
         try:
             token = self.oauth2helper.get_token()
             identity = self.oauth2helper.identify(token)
@@ -50,12 +44,12 @@ class OAuth2Controller(base.BaseController):
             self.oauth2helper.redirect_from_callback(identity)
         except Exception as e:
             # If the callback is called with an error, we must show the message
-            error_description = request.GET.get('error_description')
+            error_description = toolkit.request.GET.get('error_description')
             if not error_description:
                 error_description = e.message
 
-            response.status_int = 302
-            redirect_url = oauth2.get_came_from(request.params.get('state'))
+            toolkit.response.status_int = 302
+            redirect_url = oauth2.get_came_from(toolkit.request.params.get('state'))
             redirect_url = '/' if redirect_url == oauth2.INITIAL_PAGE else redirect_url
-            response.location = redirect_url
+            toolkit.response.location = redirect_url
             helpers.flash_error(error_description)
