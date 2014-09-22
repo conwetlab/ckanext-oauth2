@@ -307,18 +307,29 @@ class OAuth2PluginTest(unittest.TestCase):
         self.assertIn('repoze.who.userid', identity)
         self.assertEquals(username, identity['repoze.who.userid'])
 
+    @parameterized.expand([
+        ({'error': 'invalid_token', 'error_description': 'Error Description'},),
+        ({'error': 'another_error'},)
+    ])
     @httpretty.activate
-    def test_authenticate_invalid_token(self):
+    def test_authenticate_invalid_token(self, user_info):
 
         helper = self._helper()
-        user_info = {'error': 'invalid_token', 'error_description': 'error_description'}
         identity = {}
-        identity['oauth2.token'] = 'OAUTH_TOKEN'
+        identity['oauth2.token'] = {'access_token': 'OAUTH_TOKEN'}
 
-        httpretty.register_uri(httpretty.GET, self._profile_api_url, status=401, body=json.dumps(user_info))
+        httpretty.register_uri(httpretty.GET, helper.profile_api_url, status=401, body=json.dumps(user_info))
 
-        with self.assertRaises(ValueError):
+        exception_risen = False
+        try:
             helper.authenticate(identity)
+        except Exception as e:
+            if user_info['error'] == 'invalid_token':
+                self.assertIsInstance(e, ValueError)
+                self.assertEquals(user_info['error_description'], e.message)
+            exception_risen = True
+
+        self.assertTrue(exception_risen)
 
     def test_authenticate_no_token(self):
         self.assertEquals(None, self._helper().authenticate({}))
