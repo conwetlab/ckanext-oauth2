@@ -26,32 +26,31 @@ from mock import MagicMock
 from nose_parameterized import parameterized
 
 RETURNED_STATUS = 302
-DEFAULT_MESSAGE = 'It was impossible to log in you using the OAuth2 Service'
 EXAMPLE_FLASH = 'This is a test'
+EXCEPTION_MSG = 'Invalid'
 CAME_FROM_FIELD = 'came_from'
 
 
 class OAuth2PluginTest(unittest.TestCase):
 
     def setUp(self):
-
-        self.controller = controller.OAuth2Controller()
-
         # Save the response, the request and the helper functions and mock them
-        self._response = controller.response
-        controller.response = MagicMock()
-
-        self._request = controller.request
-        controller.request = MagicMock()
-
         self._helpers = controller.helpers
         controller.helpers = MagicMock()
 
+        self._oauth2 = controller.oauth2
+        controller.oauth2 = MagicMock()
+
+        self._toolkit = controller.toolkit
+        controller.toolkit = MagicMock()
+
+        self.controller = controller.OAuth2Controller()
+
     def tearDown(self):
         # Unmock the function
-        controller.response = self._response
-        controller.request = self._request
         controller.helpers = self._helpers
+        controller.oauth2 = self._oauth2
+        controller.toolkit = self._toolkit
 
     def generate_state(self, url):
         return b64encode(bytes(json.dumps({CAME_FROM_FIELD: url})))
@@ -59,23 +58,46 @@ class OAuth2PluginTest(unittest.TestCase):
     def get_came_from(self, state):
         return json.loads(b64decode(state)).get(CAME_FROM_FIELD, '/')
 
+    def test_controller_no_errors(self):
+        oauth2Helper = controller.oauth2.OAuth2Helper.return_value
+
+        token = {'oauth2.token': 'TOKEN'}
+        identity = {'repoze.who.userid': 'user_id'}
+        oauth2Helper.identify.return_value = token
+        oauth2Helper.authenticate.return_value = identity
+
+        # Call the controller
+        self.controller.callback()
+
+        oauth2Helper.identify.assert_called_once()
+        oauth2Helper.authenticate.assert_called_once_with(token)
+        oauth2Helper.remember.assert_called_once_with(identity)
+        oauth2Helper.update_token.assert_called_once_with(identity['repoze.who.userid'], token['oauth2.token'])
+        oauth2Helper.redirect_from_callback.assert_called_once_with(identity)
+
     @parameterized.expand([
         (),
         ('/',),
         ('/about', EXAMPLE_FLASH, EXAMPLE_FLASH)
     ])
-    def test_controller(self, came_from=None, error_description=None, expected_flash=DEFAULT_MESSAGE):
+    def test_controller_errors(self, came_from=None, error_description=None, expected_flash=EXCEPTION_MSG):
 
-        controller.request.GET = {}
-        controller.request.GET['state'] = self.generate_state(came_from)
+        # Recover function
+        controller.oauth2.get_came_from = self.get_came_from
+
+        oauth2Helper = controller.oauth2.OAuth2Helper.return_value
+        oauth2Helper.identify.side_effect = Exception(EXCEPTION_MSG)
+
+        controller.toolkit.request.GET = {}
+        controller.toolkit.request.GET['state'] = self.generate_state(came_from)
         if error_description is not None:
-            controller.request.GET['error_description'] = error_description
-        controller.request.params.get = controller.request.GET.get
+            controller.toolkit.request.GET['error_description'] = error_description
+        controller.toolkit.request.params.get = controller.toolkit.request.GET.get
 
         # Call the controller
         self.controller.callback()
 
         # Check the state and the location
-        self.assertEquals(RETURNED_STATUS, controller.response.status_int)
-        self.assertEquals(came_from, controller.response.location)
+        self.assertEquals(RETURNED_STATUS, controller.toolkit.response.status_int)
+        self.assertEquals(came_from, controller.toolkit.response.location)
         controller.helpers.flash_error.assert_called_once_with(expected_flash)
