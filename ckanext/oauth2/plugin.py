@@ -155,7 +155,7 @@ class OAuth2Plugin(plugins.SingletonPlugin):
             'user_create': user_create,
             'user_update': user_update,
             'user_reset': user_reset,
-            'request_reset': request_reset,
+            'request_reset': request_reset
         }
 
     def update_config(self, config):

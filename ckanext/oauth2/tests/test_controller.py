@@ -83,7 +83,7 @@ class OAuth2PluginTest(unittest.TestCase):
     def test_controller_errors(self, came_from=None, error_description=None, expected_flash=EXCEPTION_MSG):
 
         # Recover function
-        controller.oauth2.get_came_from = self._oauth2.get_came_from
+        controller.oauth2.get_came_from = self.get_came_from
 
         oauth2Helper = controller.oauth2.OAuth2Helper.return_value
         oauth2Helper.identify.side_effect = Exception(EXCEPTION_MSG)
