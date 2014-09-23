@@ -20,13 +20,13 @@
 from __future__ import unicode_literals
 
 import logging
-import ckanext.oauth2.repozewho as oauth2_repozewho
+import oauth2
 
 from functools import partial
-from pylons import config
 from ckan import plugins
 from ckan.common import session
 from ckan.plugins import toolkit
+from pylons import config
 
 log = logging.getLogger(__name__)
 
@@ -70,21 +70,24 @@ class OAuth2Plugin(plugins.SingletonPlugin):
     def __init__(self, name=None):
         '''Store the OAuth 2 client configuration'''
         log.debug('Init OAuth2 extension')
-        self.logout_url = config.get('ckan.oauth2.logout_url', '/user/logged_out')
+
         self.register_url = config.get('ckan.oauth2.register_url', None)
         self.reset_url = config.get('ckan.oauth2.reset_url', None)
         self.edit_url = config.get('ckan.oauth2.edit_url', None)
+        self.authorization_header = config.get('ckan.oauth2.authorization_header', 'Authorization')
+
+        self.oauth2helper = oauth2.OAuth2Helper()
 
     def before_map(self, m):
         log.debug('Setting up the redirections to the OAuth2 service')
 
         # We need to handle petitions received to the Callback URL
         # since some error can arise and we need to process them
-        m.connect(oauth2_repozewho.REDIRECT_URL,
+        m.connect('/oauth2/callback',
                   controller='ckanext.oauth2.controller:OAuth2Controller',
                   action='callback')
 
-        # Redirect the user to the OAuth service register page
+        # # Redirect the user to the OAuth service register page
         if self.register_url:
             m.redirect('/user/register', self.register_url)
 
@@ -99,48 +102,52 @@ class OAuth2Plugin(plugins.SingletonPlugin):
         return m
 
     def identify(self):
+        log.debug('identify')
+
         # Create session if it does not exist. Workaround to show flash messages
         session.save()
 
         def _refresh_and_save_token(user_name):
-            new_token = toolkit.request.environ['repoze.who.plugins']['oauth2'].refresh_token(user_name)
+            new_token = self.oauth2helper.refresh_token(user_name)
             if new_token:
                 toolkit.c.usertoken = new_token
 
-        log.debug('identify')
         environ = toolkit.request.environ
-        if 'repoze.who.identity' in environ:
-            repoze_userid = environ['repoze.who.identity']['repoze.who.userid']
-            log.debug('User logged %r' % repoze_userid)
-            toolkit.c.user = repoze_userid
-            toolkit.c.usertoken = toolkit.request.environ['repoze.who.plugins']['oauth2'].get_token(repoze_userid)
-            toolkit.c.usertoken_refresh = partial(_refresh_and_save_token, repoze_userid)
+        apikey = toolkit.request.headers.get(self.authorization_header, '')
+        user_name = None
+
+        # This API Key is not the one of CKAN, it's the one provided by the OAuth2 Service
+        if apikey:
+            try:
+                identity = {'oauth2.token': {'access_token': apikey}}
+                auth = self.oauth2helper.authenticate(identity)
+                if auth and 'repoze.who.userid' in auth:
+                    user_name = auth['repoze.who.userid']
+                    log.info('User %s logged using the IdM Access Token' % user_name)
+            except Exception:
+                pass
+
+        # If the authentication via API fails, we can still log in the user using session.
+        if user_name is None and 'repoze.who.identity' in environ:
+            user_name = environ['repoze.who.identity']['repoze.who.userid']
+            log.info('User %s logged using session' % user_name)
+
+        # If we have been able to log in the user (via API or Session)
+        if user_name:
+            toolkit.c.user = user_name
+            toolkit.c.usertoken = self.oauth2helper.get_token(user_name)
+            toolkit.c.usertoken_refresh = partial(_refresh_and_save_token, user_name)
         else:
             log.warn('The user is not currently logged...')
 
     def login(self):
         log.debug('login')
+
         if not toolkit.c.user:
-            # A 401 HTTP Status will cause the login to be triggered
-            return toolkit.abort(401)
-        redirect_to = toolkit.request.headers.get('Referer', '/')
-        toolkit.redirect_to(bytes(redirect_to))
-
-    def logout(self):
-        log.debug('logout')
-        environ = toolkit.request.environ
-
-        if 'repoze.who.identity' in environ:
-            repoze_userid = environ['repoze.who.identity']['repoze.who.userid']
-
-            for plugin_name in environ['repoze.who.plugins']:
-                plugin = environ['repoze.who.plugins'][plugin_name]
-                if hasattr(plugin, 'forget'):
-                    headers = plugin.forget(environ, repoze_userid)
-                    for header, value in headers:
-                        toolkit.response.headers.add(header, value)
-
-        return toolkit.redirect_to(bytes(self.logout_url), locale='default')
+            self.oauth2helper.challenge()
+        else:
+            redirect_to = toolkit.request.headers.get('Referer', '/')
+            toolkit.redirect_to(bytes(redirect_to))
 
     def get_auth_functions(self):
         # we need to prevent some actions being authorized.
@@ -148,7 +155,7 @@ class OAuth2Plugin(plugins.SingletonPlugin):
             'user_create': user_create,
             'user_update': user_update,
             'user_reset': user_reset,
-            'request_reset': request_reset,
+            'request_reset': request_reset
         }
 
     def update_config(self, config):
