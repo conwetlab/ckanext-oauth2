@@ -74,6 +74,7 @@ class OAuth2Plugin(plugins.SingletonPlugin):
         self.register_url = config.get('ckan.oauth2.register_url', None)
         self.reset_url = config.get('ckan.oauth2.reset_url', None)
         self.edit_url = config.get('ckan.oauth2.edit_url', None)
+        self.authorization_header = config.get('ckan.oauth2.authorization_header', 'Authorization')
 
         self.oauth2helper = oauth2.OAuth2Helper()
 
@@ -112,18 +113,36 @@ class OAuth2Plugin(plugins.SingletonPlugin):
                 toolkit.c.usertoken = new_token
 
         environ = toolkit.request.environ
-        if 'repoze.who.identity' in environ:
-            repoze_userid = environ['repoze.who.identity']['repoze.who.userid']
-            log.debug('User logged %r' % repoze_userid)
-            toolkit.c.user = repoze_userid
-            toolkit.c.usertoken = self.oauth2helper.get_token(repoze_userid)
-            toolkit.c.usertoken_refresh = partial(_refresh_and_save_token, repoze_userid)
+        apikey = toolkit.request.headers.get(self.authorization_header, '')
+        user_name = None
+
+        # This API Key is not the one of CKAN, it's the one provided by the OAuth2 Service
+        if apikey:
+            try:
+                identity = {'oauth2.token': {'access_token': apikey}}
+                auth = self.oauth2helper.authenticate(identity)
+                if auth and 'repoze.who.userid' in auth:
+                    user_name = auth['repoze.who.userid']
+                    log.info('User %s logged using the IdM Access Token' % user_name)
+            except Exception:
+                pass
+
+        # If the authentication via API fails, we can still log in the user using session.
+        if user_name is None and 'repoze.who.identity' in environ:
+            user_name = environ['repoze.who.identity']['repoze.who.userid']
+            log.info('User %s logged using session' % user_name)
+
+        # If we have been able to log in the user (via API or Session)
+        if user_name:
+            toolkit.c.user = user_name
+            toolkit.c.usertoken = self.oauth2helper.get_token(user_name)
+            toolkit.c.usertoken_refresh = partial(_refresh_and_save_token, user_name)
         else:
             log.warn('The user is not currently logged...')
 
     def login(self):
         log.debug('login')
-        
+
         if not toolkit.c.user:
             self.oauth2helper.challenge()
         else:

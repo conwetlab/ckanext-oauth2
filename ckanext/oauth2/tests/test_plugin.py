@@ -23,13 +23,15 @@ import ckanext.oauth2.plugin as plugin
 from mock import MagicMock
 from nose_parameterized import parameterized
 
+AUTHORIZATION_HEADER = 'Custom_Header'
+
 
 class PluginTest(unittest.TestCase):
 
     def setUp(self):
         # Save functions and mock them
         self._config = plugin.config
-        plugin.config = MagicMock()
+        plugin.config = {'ckan.oauth2.authorization_header': AUTHORIZATION_HEADER}
 
         self._toolkit = plugin.toolkit
         plugin.toolkit = MagicMock()
@@ -50,12 +52,9 @@ class PluginTest(unittest.TestCase):
         plugin.session = self._session
 
     def _set_identity(self, identity):
+        plugin.toolkit.request.environ = {}
         if identity:
-            plugin.toolkit.request.environ = {}
-            plugin.toolkit.request.environ['repoze.who.identity'] = {}
-            plugin.toolkit.request.environ['repoze.who.identity']['repoze.who.userid'] = identity
-        else:
-            plugin.toolkit.request.environ = {}
+            plugin.toolkit.request.environ['repoze.who.identity'] = {'repoze.who.userid': identity}
 
     @parameterized.expand([
         (),
@@ -112,10 +111,16 @@ class PluginTest(unittest.TestCase):
             self.assertEquals(False, function_result['success'])
 
     @parameterized.expand([
-        (None,),
-        ('test')
+        (),
+        ({},                                None,                          'test',  'test'),
+        ({AUTHORIZATION_HEADER: 'api_key'}, {'repoze.who.userid': 'test'}, None,    'test'),
+        ({AUTHORIZATION_HEADER: 'api_key'}, {'repoze.who.userid': 'test'}, 'test2', 'test'),
+        ({AUTHORIZATION_HEADER: 'api_key'}, ValueError('Invalid KEY'),     'test2', 'test2'),
+        ({AUTHORIZATION_HEADER: 'api_key'}, None,                          'test2', 'test2'),
+        ({'invalid_header': 'api_key'},     {'repoze.who.userid': 'test'}, None,    None),
+        ({'invalid_header': 'api_key'},     {'repoze.who.userid': 'test'}, 'test2', 'test2'),
     ])
-    def test_identify(self, identity=None):
+    def test_identify(self, headers={}, authenticate_result=None, identity=None, expected_user=None):
 
         self._set_identity(identity)
 
@@ -132,8 +137,18 @@ class PluginTest(unittest.TestCase):
             'expires_in': '3600'
         }
 
+        def authenticate_side_effect(identity):
+            if isinstance(authenticate_result, Exception):
+                raise authenticate_result
+            else:
+                return authenticate_result
+
+        plugin.oauth2.OAuth2Helper.return_value.authenticate.side_effect = authenticate_side_effect
         plugin.oauth2.OAuth2Helper.return_value.get_token = MagicMock(return_value=usertoken)
         plugin.oauth2.OAuth2Helper.return_value.refresh_token = MagicMock(return_value=newtoken)
+
+        # Authentication header is not included
+        plugin.toolkit.request.headers = headers
 
         # The identify function must set the user id in this variable
         plugin.toolkit.c.user = None
@@ -143,10 +158,16 @@ class PluginTest(unittest.TestCase):
         # Call the function
         self._plugin.identify()
 
-        self.assertEquals(identity, plugin.toolkit.c.user)
+        # Check that the function "authenticate" (called when the API Key is included) has not been called
+        if headers and AUTHORIZATION_HEADER in headers:
+            plugin.oauth2.OAuth2Helper.return_value.authenticate.assert_called_once_with({'oauth2.token': {'access_token': headers[AUTHORIZATION_HEADER]}})
+        else:
+            self.assertEquals(0, plugin.oauth2.OAuth2Helper.return_value.authenticate.call_count)
+
+        self.assertEquals(expected_user, plugin.toolkit.c.user)
         plugin.session.save.assert_called_once()
 
-        if identity is None:
+        if expected_user is None:
             self.assertIsNone(plugin.toolkit.c.usertoken)
             self.assertIsNone(plugin.toolkit.c.usertoken_refresh)
         else:
@@ -154,7 +175,7 @@ class PluginTest(unittest.TestCase):
 
             # method 'usertoken_refresh' should relay on the one provided by the repoze.who module
             plugin.toolkit.c.usertoken_refresh()
-            plugin.oauth2.OAuth2Helper.return_value.refresh_token.assert_called_once_with(identity)
+            plugin.oauth2.OAuth2Helper.return_value.refresh_token.assert_called_once_with(expected_user)
             self.assertEquals(newtoken, plugin.toolkit.c.usertoken)
 
     @parameterized.expand([
