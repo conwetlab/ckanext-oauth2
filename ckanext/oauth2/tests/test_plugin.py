@@ -180,25 +180,36 @@ class PluginTest(unittest.TestCase):
 
     @parameterized.expand([
         (),
-        ('test'),
-        (None, '/about'),
-        ('test', '/about')
+        ('test', None,                        None,               '/'),
+        ('',     '/about',                    None,               '/about'),
+        ('test', '/about',                    None,               '/about'),
+        ('test', None,                        '/ckan-admin',      '/'),
+        ('test', '/about',                    '/ckan-admin',      '/about'),
+        ('',     None,                        '/ckan-admin',      '/ckan-admin'),
+        ('',     '/about',                    '/ckan-admin',      '/ckan-admin'),
+        ('',     '/',                         None,               '/dashboard'),
+        ('',     '/user/logged_out_redirect', None,               '/dashboard'),
+        ('',     '/',                         '/ckan-admin',      '/ckan-admin'),
+        ('',     '/user/logged_out_redirect', '/ckan-admin',      '/ckan-admin'),
+        ('test', 'http://google.es',          None,               '/'),
+        ('',     'http://google.es',          None,               '/dashboard'),
     ])
-    def test_login(self, user=None, referer=None):
-
-        expected_referer = '/' if referer is None else referer
+    def test_login(self, user=None, referer=None, came_from=None, expected_referer='/dashboard'):
 
         # The login function will check this variables
         plugin.toolkit.c.user = user
         plugin.toolkit.request.headers = {}
         if referer:
             plugin.toolkit.request.headers['Referer'] = referer
+        plugin.toolkit.request.params = {}
+        if came_from:
+            plugin.toolkit.request.params['came_from'] = came_from
 
         # Call the function
         self._plugin.login()
 
         if not user:
-            plugin.oauth2.OAuth2Helper.return_value.challenge.assert_called_once_with()
+            plugin.oauth2.OAuth2Helper.return_value.challenge.assert_called_once_with(expected_referer)
         else:
             self.assertEquals(0, plugin.toolkit.abort.call_count)
             plugin.toolkit.redirect_to.assert_called_with(bytes(expected_referer))
