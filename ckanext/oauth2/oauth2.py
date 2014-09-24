@@ -83,7 +83,7 @@ class OAuth2Helper(object):
             came_from_url = INITIAL_PAGE
 
         # When referer == HOME or referer == LOGOUT_PAGE, redirect the user to the dashboard
-        pages = ['/', '/user/logged_out_redirect']
+        pages = ['/user/logged_out_redirect']
         if came_from_url_parsed.path in pages:
             came_from_url = INITIAL_PAGE
 
@@ -95,64 +95,57 @@ class OAuth2Helper(object):
         toolkit.response.location = auth_url
         log.debug('Challenge: Redirecting challenge to page {0}'.format(auth_url))
 
-    def identify(self):
-        state = toolkit.request.params.get('state')
-        came_from = get_came_from(state)
+    def get_token(self):
         oauth = OAuth2Session(self.client_id, redirect_uri=self._redirect_uri(toolkit.request), scope=self.scope)
         token = oauth.fetch_token(self.token_endpoint,
                                   client_secret=self.client_secret,
                                   authorization_response=toolkit.request.url)
+        return token
 
-        return {'oauth2.token': token, CAME_FROM_FIELD: came_from}
+    def identify(self, token):
+        oauth = OAuth2Session(self.client_id, token=token)
+        profile_response = oauth.get(self.profile_api_url)
 
-    def authenticate(self, identity):
-        if 'oauth2.token' in identity:
-            oauth = OAuth2Session(self.client_id, token=identity['oauth2.token'])
-            profile_response = oauth.get(self.profile_api_url)
-
-            # Token can be invalid
-            if not profile_response.ok:
-                error = profile_response.json()
-                if error.get('error', '') == 'invalid_token':
-                    raise ValueError(error.get('error_description'))
-                else:
-                    profile_response.raise_for_status()
+        # Token can be invalid
+        if not profile_response.ok:
+            error = profile_response.json()
+            if error.get('error', '') == 'invalid_token':
+                raise ValueError(error.get('error_description'))
             else:
-                user_data = profile_response.json()
-                email = user_data[self.profile_api_mail_field]          # WARN: profile_api_mail_field should be defined!!
-                user_name = user_data[self.profile_api_user_field]      # WARN: profile_api_user_field should be defined!!
-                user = None
-                users = model.User.by_email(email)  # It returns a list of users (since it can exist some users with the same email...)
-                if len(users) == 1:                 # In the Fi-Ware case this problem does not exist since all the users have different mails...
-                    user = users[0]
-
-                # If the user does not exist, we have to create it...
-                if user is None:
-                    user = model.User(email=email)
-
-                # Now we update his/her user_name with the one provided by the OAuth2 service
-                # In the future, users will be obtained based on this field
-                user.name = user_name
-
-                # Update fullname
-                if self.profile_api_fullname_field and self.profile_api_fullname_field in user_data:
-                    user.fullname = user_data[self.profile_api_fullname_field]
-
-                # Save the user in the database
-                model.Session.add(user)
-                model.Session.commit()
-                model.Session.remove()
-
-                identity.update({'repoze.who.userid': user.name})
-                return identity
+                profile_response.raise_for_status()
         else:
-            raise ValueError('oauth2.token not found in identity')
+            user_data = profile_response.json()
+            email = user_data[self.profile_api_mail_field]          # WARN: profile_api_mail_field should be defined!!
+            user_name = user_data[self.profile_api_user_field]      # WARN: profile_api_user_field should be defined!!
+            user = None
+            users = model.User.by_email(email)  # It returns a list of users (since it can exist some users with the same email...)
+            if len(users) == 1:                 # In the Fi-Ware case this problem does not exist since all the users have different mails...
+                user = users[0]
+
+            # If the user does not exist, we have to create it...
+            if user is None:
+                user = model.User(email=email)
+
+            # Now we update his/her user_name with the one provided by the OAuth2 service
+            # In the future, users will be obtained based on this field
+            user.name = user_name
+
+            # Update fullname
+            if self.profile_api_fullname_field and self.profile_api_fullname_field in user_data:
+                user.fullname = user_data[self.profile_api_fullname_field]
+
+            # Save the user in the database
+            model.Session.add(user)
+            model.Session.commit()
+            model.Session.remove()
+
+            return user.name
 
     def _get_rememberer(self, environ):
         plugins = environ.get('repoze.who.plugins', {})
         return plugins.get(self.rememberer_name)
 
-    def remember(self, identity):
+    def remember(self, user_name):
         '''
         Remember the authenticated identity.
 
@@ -161,17 +154,19 @@ class OAuth2Helper(object):
         log.debug('Repoze OAuth remember')
         environ = toolkit.request.environ
         rememberer = self._get_rememberer(environ)
+        identity = {'repoze.who.userid': user_name}
         headers = rememberer.remember(environ, identity)
         for header, value in headers:
             toolkit.response.headers.add(header, value)
 
-    def redirect_from_callback(self, identity):
+    def redirect_from_callback(self):
         '''Redirect to the callback URL after a successful authentication.'''
-        came_from = identity.get(CAME_FROM_FIELD, INITIAL_PAGE)
+        state = toolkit.request.params.get('state')
+        came_from = get_came_from(state)
         toolkit.response.status = 302
         toolkit.response.location = came_from
 
-    def get_token(self, user_name):
+    def get_stored_token(self, user_name):
         user_token = db.UserToken.by_user_name(user_name=user_name)
         if user_token:
             return {
