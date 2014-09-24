@@ -21,6 +21,7 @@
 from __future__ import unicode_literals
 
 import ckan.model as model
+import constants
 import db
 import json
 import logging
@@ -29,22 +30,16 @@ from base64 import b64encode, b64decode
 from ckan.plugins import toolkit
 from pylons import config
 from requests_oauthlib import OAuth2Session
-from urlparse import urlparse
 
 log = logging.getLogger(__name__)
 
 
-CAME_FROM_FIELD = 'came_from'
-INITIAL_PAGE = '/dashboard'
-REDIRECT_URL = '/oauth2/callback'
-
-
 def generate_state(url):
-    return b64encode(bytes(json.dumps({CAME_FROM_FIELD: url})))
+    return b64encode(bytes(json.dumps({constants.CAME_FROM_FIELD: url})))
 
 
 def get_came_from(state):
-    return json.loads(b64decode(state)).get(CAME_FROM_FIELD, '/')
+    return json.loads(b64decode(state)).get(constants.CAME_FROM_FIELD, '/')
 
 
 class OAuth2Helper(object):
@@ -71,23 +66,10 @@ class OAuth2Helper(object):
                              'profile_api_url and profile_api_user_field are required')
 
     def _redirect_uri(self, request):
-        return ''.join([request.host_url, REDIRECT_URL])
+        return ''.join([request.host_url, constants.REDIRECT_URL])
 
-    def challenge(self):
+    def challenge(self, came_from_url):
         # This function is called by the log in function when the user is not logged in
-        came_from_url = toolkit.request.headers.get('Referer', INITIAL_PAGE)
-        came_from_url_parsed = urlparse(came_from_url)
-
-        # Avoid redirecting to external hosts when a user logs in
-        if came_from_url_parsed.netloc != '' and came_from_url_parsed.netloc != toolkit.request.host:
-            came_from_url = INITIAL_PAGE
-
-        # When referer == HOME or referer == LOGOUT_PAGE, redirect the user to the dashboard
-        pages = ['/', '/user/logged_out_redirect']
-        if came_from_url_parsed.path in pages:
-            came_from_url = INITIAL_PAGE
-
-        came_from_url = INITIAL_PAGE if came_from_url_parsed.netloc != '' and came_from_url_parsed.netloc != toolkit.request.host else came_from_url
         state = generate_state(came_from_url)
         oauth = OAuth2Session(self.client_id, redirect_uri=self._redirect_uri(toolkit.request), scope=self.scope, state=state)
         auth_url, _ = oauth.authorization_url(self.authorization_endpoint)

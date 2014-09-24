@@ -19,6 +19,7 @@
 
 from __future__ import unicode_literals
 
+import constants
 import logging
 import oauth2
 
@@ -27,6 +28,7 @@ from ckan import plugins
 from ckan.common import session
 from ckan.plugins import toolkit
 from pylons import config
+from urlparse import urlparse
 
 log = logging.getLogger(__name__)
 
@@ -140,11 +142,38 @@ class OAuth2Plugin(plugins.SingletonPlugin):
     def login(self):
         log.debug('login')
 
-        if not toolkit.c.user:
-            self.oauth2helper.challenge()
+        # Log in attemps can be fired on two situations:
+        #   a) The user clicks on the log in button
+        #   b) The user tries to access a protected asset and he/she is not logged in or
+        #      have not got enough privileges.
+        # If the user is already logged, the system mustn't try to log him/her in again but
+        # must redirect the user the previous page and show him/her an error message.
+
+        # Get previous page
+        # Already logged users must not be redirected to the dashboard but the main page.
+        initial_page = '/' if toolkit.c.user else constants.INITIAL_PAGE
+
+        if toolkit.c.user or not 'came_from' in toolkit.request.params:
+            came_from_url = toolkit.request.headers.get('Referer', initial_page)
         else:
-            redirect_to = toolkit.request.headers.get('Referer', '/')
-            toolkit.redirect_to(bytes(redirect_to))
+            came_from_url = toolkit.request.params.get('came_from', constants.INITIAL_PAGE)
+
+        came_from_url_parsed = urlparse(came_from_url)
+
+        # Avoid redirecting to external hosts
+        if came_from_url_parsed.netloc != '' and came_from_url_parsed.netloc != toolkit.request.host:
+            came_from_url = initial_page
+
+        if not toolkit.c.user:
+            # When a user is being logged and REFERER == HOME or LOGOUT_PAGE
+            # he/she must be redirected to the dashboard
+            pages = ['/', '/user/logged_out_redirect']
+            if came_from_url_parsed.path in pages:
+                came_from_url = constants.INITIAL_PAGE
+
+            self.oauth2helper.challenge(came_from_url)
+        else:
+            toolkit.redirect_to(bytes(came_from_url))
 
     def get_auth_functions(self):
         # we need to prevent some actions being authorized.

@@ -18,6 +18,7 @@
 # along with OAuth2 CKAN Extension.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
+import constants
 import oauth2
 
 import ckan.lib.helpers as helpers
@@ -57,6 +58,6 @@ class OAuth2Controller(base.BaseController):
 
             toolkit.response.status_int = 302
             redirect_url = oauth2.get_came_from(toolkit.request.params.get('state'))
-            redirect_url = '/' if redirect_url == oauth2.INITIAL_PAGE else redirect_url
+            redirect_url = '/' if redirect_url == constants.INITIAL_PAGE else redirect_url
             toolkit.response.location = redirect_url
             helpers.flash_error(error_description)
