@@ -112,13 +112,13 @@ class PluginTest(unittest.TestCase):
 
     @parameterized.expand([
         (),
-        ({},                                None,                          'test',  'test'),
-        ({AUTHORIZATION_HEADER: 'api_key'}, {'repoze.who.userid': 'test'}, None,    'test'),
-        ({AUTHORIZATION_HEADER: 'api_key'}, {'repoze.who.userid': 'test'}, 'test2', 'test'),
-        ({AUTHORIZATION_HEADER: 'api_key'}, ValueError('Invalid KEY'),     'test2', 'test2'),
-        ({AUTHORIZATION_HEADER: 'api_key'}, None,                          'test2', 'test2'),
-        ({'invalid_header': 'api_key'},     {'repoze.who.userid': 'test'}, None,    None),
-        ({'invalid_header': 'api_key'},     {'repoze.who.userid': 'test'}, 'test2', 'test2'),
+        ({},                                None,                      'test',  'test'),
+        ({AUTHORIZATION_HEADER: 'api_key'}, 'test',                    None,    'test'),
+        ({AUTHORIZATION_HEADER: 'api_key'}, 'test',                    'test2', 'test'),
+        ({AUTHORIZATION_HEADER: 'api_key'}, ValueError('Invalid Key'), 'test2', 'test2'),
+        ({AUTHORIZATION_HEADER: 'api_key'}, None,                      'test2', 'test2'),
+        ({'invalid_header': 'api_key'},     'test',                    None,    None),
+        ({'invalid_header': 'api_key'},     'test',                    'test2', 'test2'),
     ])
     def test_identify(self, headers={}, authenticate_result=None, identity=None, expected_user=None):
 
@@ -143,8 +143,8 @@ class PluginTest(unittest.TestCase):
             else:
                 return authenticate_result
 
-        plugin.oauth2.OAuth2Helper.return_value.authenticate.side_effect = authenticate_side_effect
-        plugin.oauth2.OAuth2Helper.return_value.get_token = MagicMock(return_value=usertoken)
+        plugin.oauth2.OAuth2Helper.return_value.identify.side_effect = authenticate_side_effect
+        plugin.oauth2.OAuth2Helper.return_value.get_stored_token = MagicMock(return_value=usertoken)
         plugin.oauth2.OAuth2Helper.return_value.refresh_token = MagicMock(return_value=newtoken)
 
         # Authentication header is not included
@@ -160,9 +160,9 @@ class PluginTest(unittest.TestCase):
 
         # Check that the function "authenticate" (called when the API Key is included) has not been called
         if headers and AUTHORIZATION_HEADER in headers:
-            plugin.oauth2.OAuth2Helper.return_value.authenticate.assert_called_once_with({'oauth2.token': {'access_token': headers[AUTHORIZATION_HEADER]}})
+            plugin.oauth2.OAuth2Helper.return_value.identify.assert_called_once_with({'access_token': headers[AUTHORIZATION_HEADER]})
         else:
-            self.assertEquals(0, plugin.oauth2.OAuth2Helper.return_value.authenticate.call_count)
+            self.assertEquals(0, plugin.oauth2.OAuth2Helper.return_value.identify.call_count)
 
         self.assertEquals(expected_user, plugin.toolkit.c.user)
         plugin.session.save.assert_called_once()
