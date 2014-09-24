@@ -95,60 +95,53 @@ class OAuth2Helper(object):
         toolkit.response.location = auth_url
         log.debug('Challenge: Redirecting challenge to page {0}'.format(auth_url))
 
-    def identify(self):
-        state = toolkit.request.params.get('state')
-        came_from = get_came_from(state)
+    def get_token(self):
         oauth = OAuth2Session(self.client_id, redirect_uri=self._redirect_uri(toolkit.request), scope=self.scope)
         token = oauth.fetch_token(self.token_endpoint,
                                   client_secret=self.client_secret,
                                   authorization_response=toolkit.request.url)
+        return token
 
-        return {'oauth2.token': token, CAME_FROM_FIELD: came_from}
+    def identify(self, token):
+        oauth = OAuth2Session(self.client_id, token=token)
+        profile_response = oauth.get(self.profile_api_url)
 
-    def authenticate(self, identity):
-        if 'oauth2.token' in identity:
-            oauth = OAuth2Session(self.client_id, token=identity['oauth2.token'])
-            profile_response = oauth.get(self.profile_api_url)
-
-            # Token can be invalid
-            if not profile_response.ok:
-                error = profile_response.json()
-                if error.get('error', '') == 'invalid_token':
-                    raise ValueError(error.get('error_description'))
-                else:
-                    profile_response.raise_for_status()
+        # Token can be invalid
+        if not profile_response.ok:
+            error = profile_response.json()
+            if error.get('error', '') == 'invalid_token':
+                raise ValueError(error.get('error_description'))
             else:
-                user_data = profile_response.json()
-                user_name = user_data[self.profile_api_user_field]
-                user = model.User.by_name(user_name)
-
-                if user is None:
-                    # If the user does not exist, it's created
-                    user = model.User(name=user_name)
-
-                # Update fullname
-                if self.profile_api_fullname_field and self.profile_api_fullname_field in user_data:
-                    user.fullname = user_data[self.profile_api_fullname_field]
-
-                # Update mail
-                if self.profile_api_mail_field and self.profile_api_mail_field in user_data:
-                    user.email = user_data[self.profile_api_mail_field]
-
-                # Save the user in the database
-                model.Session.add(user)
-                model.Session.commit()
-                model.Session.remove()
-
-                identity.update({'repoze.who.userid': user.name})
-                return identity
+                profile_response.raise_for_status()
         else:
-            raise ValueError('oauth2.token not found in identity')
+            user_data = profile_response.json()
+            user_name = user_data[self.profile_api_user_field]
+            user = model.User.by_name(user_name)
+
+            if user is None:
+                # If the user does not exist, it's created
+                user = model.User(name=user_name)
+
+            # Update fullname
+            if self.profile_api_fullname_field and self.profile_api_fullname_field in user_data:
+                user.fullname = user_data[self.profile_api_fullname_field]
+
+            # Update mail
+            if self.profile_api_mail_field and self.profile_api_mail_field in user_data:
+                user.email = user_data[self.profile_api_mail_field]
+
+            # Save the user in the database
+            model.Session.add(user)
+            model.Session.commit()
+            model.Session.remove()
+
+            return user.name
 
     def _get_rememberer(self, environ):
         plugins = environ.get('repoze.who.plugins', {})
         return plugins.get(self.rememberer_name)
 
-    def remember(self, identity):
+    def remember(self, user_name):
         '''
         Remember the authenticated identity.
 
@@ -157,17 +150,19 @@ class OAuth2Helper(object):
         log.debug('Repoze OAuth remember')
         environ = toolkit.request.environ
         rememberer = self._get_rememberer(environ)
+        identity = {'repoze.who.userid': user_name}
         headers = rememberer.remember(environ, identity)
         for header, value in headers:
             toolkit.response.headers.add(header, value)
 
-    def redirect_from_callback(self, identity):
+    def redirect_from_callback(self):
         '''Redirect to the callback URL after a successful authentication.'''
-        came_from = identity.get(CAME_FROM_FIELD, INITIAL_PAGE)
+        state = toolkit.request.params.get('state')
+        came_from = get_came_from(state)
         toolkit.response.status = 302
         toolkit.response.location = came_from
 
-    def get_token(self, user_name):
+    def get_stored_token(self, user_name):
         user_token = db.UserToken.by_user_name(user_name=user_name)
         if user_token:
             return {

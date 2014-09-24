@@ -119,11 +119,8 @@ class OAuth2Plugin(plugins.SingletonPlugin):
         # This API Key is not the one of CKAN, it's the one provided by the OAuth2 Service
         if apikey:
             try:
-                identity = {'oauth2.token': {'access_token': apikey}}
-                auth = self.oauth2helper.authenticate(identity)
-                if auth and 'repoze.who.userid' in auth:
-                    user_name = auth['repoze.who.userid']
-                    log.info('User %s logged using the IdM Access Token' % user_name)
+                token = {'access_token': apikey}
+                user_name = self.oauth2helper.identify(token)
             except Exception:
                 pass
 
@@ -135,7 +132,7 @@ class OAuth2Plugin(plugins.SingletonPlugin):
         # If we have been able to log in the user (via API or Session)
         if user_name:
             toolkit.c.user = user_name
-            toolkit.c.usertoken = self.oauth2helper.get_token(user_name)
+            toolkit.c.usertoken = self.oauth2helper.get_stored_token(user_name)
             toolkit.c.usertoken_refresh = partial(_refresh_and_save_token, user_name)
         else:
             log.warn('The user is not currently logged...')

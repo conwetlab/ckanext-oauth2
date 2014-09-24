@@ -36,12 +36,11 @@ class OAuth2Controller(base.BaseController):
 
     def callback(self):
         try:
-            token = self.oauth2helper.identify()
-            identity = self.oauth2helper.authenticate(token)
-            user_name = identity['repoze.who.userid']
-            self.oauth2helper.remember(identity)
-            self.oauth2helper.update_token(user_name, token['oauth2.token'])
-            self.oauth2helper.redirect_from_callback(identity)
+            token = self.oauth2helper.get_token()
+            user_name = self.oauth2helper.identify(token)
+            self.oauth2helper.remember(user_name)
+            self.oauth2helper.update_token(user_name, token)
+            self.oauth2helper.redirect_from_callback()
         except Exception as e:
 
             # If the callback is called with an error, we must show the message
