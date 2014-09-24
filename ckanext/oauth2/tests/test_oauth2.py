@@ -190,17 +190,7 @@ class OAuth2PluginTest(unittest.TestCase):
         for header, value in headers:
             oauth2.toolkit.response.headers.add.assert_any_call(header, value)
 
-    @parameterized.expand([
-        (True, '/'),
-        (True, '/about', '/about'),
-        (True, 'http://google.es'),
-        (True, 'http://localhost/'),
-        (True, 'http://localhost/about', 'http://localhost/about'),
-        (True, 'http://localhost/user/logged_out_redirect'),
-        (True, '/user/logged_out_redirect'),
-        (False,),
-    ])
-    def test_challenge(self, include_referer=True, referer='/', expected_referer='/dashboard'):
+    def test_challenge(self):
         helper = self._helper()
 
         # Build mocks
@@ -208,18 +198,17 @@ class OAuth2PluginTest(unittest.TestCase):
         request = make_request(False, 'localhost', 'user/login', {})
         request.environ = MagicMock()
         request.headers = {}
-        if include_referer:
-            request.headers['Referer'] = referer
+        came_from = '/came_from_example'
 
         oauth2.toolkit = MagicMock()
         oauth2.toolkit.request = request
         oauth2.toolkit.response = MagicMock()
 
         # Call the method
-        helper.challenge()
+        helper.challenge(came_from)
 
         # Check
-        state = urlencode({'state': b64encode(bytes(json.dumps({'came_from': expected_referer})))})
+        state = urlencode({'state': b64encode(bytes(json.dumps({'came_from': came_from})))})
         expected_url = 'https://test/oauth2/authorize/?response_type=code&client_id=client-id&' + \
                        'redirect_uri=http%3A%2F%2Flocalhost%2Foauth2%2Fcallback&' + state
         self.assertEquals(302, oauth2.toolkit.response.status)
