@@ -49,9 +49,9 @@ class OAuth2Controller(base.BaseController):
             if not error_description:
                 if e.message:
                     error_description = e.message
-                elif e.description:
+                elif hasattr(e, 'description') and e.description:
                     error_description = e.description
-                elif e.error:
+                elif hasattr(e, 'error') and e.error:
                     error_description = e.error
                 else:
                     error_description = type(e).__name__

@@ -31,6 +31,19 @@ EXCEPTION_MSG = 'Invalid'
 CAME_FROM_FIELD = 'came_from'
 
 
+class CompleteException(Exception):
+    description = 'Exception description'
+    error = 'Exception error'
+
+
+class ErrorException(Exception):
+    error = 'Exception error 2'
+
+
+class VoidException(Exception):
+    pass
+
+
 class OAuth2PluginTest(unittest.TestCase):
 
     def setUp(self):
@@ -78,15 +91,22 @@ class OAuth2PluginTest(unittest.TestCase):
     @parameterized.expand([
         (),
         ('/',),
-        ('/about', EXAMPLE_FLASH, EXAMPLE_FLASH)
+        ('/', CompleteException(EXCEPTION_MSG), None, EXCEPTION_MSG),
+        ('/', CompleteException(), None, CompleteException.description),
+        ('/', ErrorException(EXCEPTION_MSG), None, EXCEPTION_MSG),
+        ('/', ErrorException(), None, ErrorException.error),
+        ('/', VoidException(EXCEPTION_MSG), None, EXCEPTION_MSG),
+        ('/', VoidException(), None, type(VoidException()).__name__),
+        ('/about', Exception(EXCEPTION_MSG), EXAMPLE_FLASH, EXAMPLE_FLASH)
     ])
-    def test_controller_errors(self, came_from=None, error_description=None, expected_flash=EXCEPTION_MSG):
+    def test_controller_errors(self, came_from=None, exception=Exception(EXCEPTION_MSG),
+                               error_description=None, expected_flash=EXCEPTION_MSG):
 
         # Recover function
         controller.oauth2.get_came_from = self.get_came_from
 
         oauth2Helper = controller.oauth2.OAuth2Helper.return_value
-        oauth2Helper.get_token.side_effect = Exception(EXCEPTION_MSG)
+        oauth2Helper.get_token.side_effect = exception
 
         controller.toolkit.request.GET = {}
         controller.toolkit.request.GET['state'] = self.generate_state(came_from)
