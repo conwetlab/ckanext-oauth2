@@ -12,3 +12,7 @@ Links
 1. [Activating & Installing the plugin](https://github.com/conwetlab/ckanext-oauth2/wiki/Activating-and-Installing)
 2. [Starting CKAN over HTTPs](https://github.com/conwetlab/ckanext-oauth2/wiki/Starting-CKAN-over-HTTPs)
 3. [How it works?](https://github.com/conwetlab/ckanext-oauth2/wiki/How-it-works%3F)
+ 
+Credits
+-------
+Based on the idea proposed by [Etalab](https://github.com/etalab/ckanext-oauth2)
