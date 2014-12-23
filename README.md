@@ -1,4 +1,4 @@
-OAuth2 CKAN extension  [![Build Status](http://hercules.ls.fi.upm.es/jenkins/buildStatus/icon?job=ckan_oauth2)](http://hercules.ls.fi.upm.es/jenkins/job/ckan_oauth2/)
+OAuth2 CKAN extension  [![Build Status](https://build.conwet.fi.upm.es/jenkins/buildStatus/icon?job=ckan_oauth2)](https://build.conwet.fi.upm.es/jenkins/job/ckan_oauth2/)
 =====================
 
 The OAuth2 extension allows site visitors to login through an OAuth2 server.
