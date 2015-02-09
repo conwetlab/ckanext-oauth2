@@ -173,7 +173,7 @@ class OAuth2Helper(object):
         model.Session.commit()
 
     def refresh_token(self, user_name):
-        token = self.get_token(user_name)
+        token = self.get_stored_token(user_name)
         if token:
             client = OAuth2Session(self.client_id, token=token, scope=self.scope)
             token = client.refresh_token(self.token_endpoint, client_secret=self.client_secret, client_id=self.client_id)

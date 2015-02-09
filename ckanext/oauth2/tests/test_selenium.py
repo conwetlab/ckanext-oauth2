@@ -67,7 +67,7 @@ class BasicLoginDifferentReferer(unittest.TestCase):
         self.assertEqual(self.base_url + "about", driver.current_url)
         driver.find_element_by_css_selector("a[title=\"Edit settings\"]").click()
         time.sleep(3)   # Wait the OAuth2 Server to return the page
-        assert driver.current_url.startswith("https://account.lab.fi-ware.org/settings")
+        assert driver.current_url.startswith("https://account.lab.fiware.org/settings")
 
     def test_basic_login_different_referer(self):
         driver = self.driver
@@ -100,11 +100,11 @@ class BasicLoginDifferentReferer(unittest.TestCase):
         driver = self.driver
         driver.get(self.base_url)
         driver.find_element_by_link_text("Register").click()
-        self.assertEqual("https://account.lab.fi-ware.org/users/sign_up", driver.current_url)
+        self.assertEqual("https://account.lab.fiware.org/users/sign_up", driver.current_url)
 
     @parameterized.expand([
-        ("user/register", "https://account.lab.fi-ware.org/users/sign_up"),
-        ("user/reset", "https://account.lab.fi-ware.org/users/password/new")
+        ("user/register", "https://account.lab.fiware.org/users/sign_up"),
+        ("user/reset", "https://account.lab.fiware.org/users/password/new")
     ])
     def test_register(self, action, expected_url):
         driver = self.driver
