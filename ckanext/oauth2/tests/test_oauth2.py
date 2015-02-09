@@ -413,7 +413,7 @@ class OAuth2PluginTest(unittest.TestCase):
         self._update_token = self.helper.update_token
 
         # mock plugin functions
-        helper.get_token = MagicMock(return_value=current_token)
+        helper.get_stored_token = MagicMock(return_value=current_token)
         helper.update_token = MagicMock()
 
         # The token returned by the system
@@ -432,6 +432,7 @@ class OAuth2PluginTest(unittest.TestCase):
 
         if user_exists:
             self.assertEquals(newtoken, result)
+            helper.get_stored_token.assert_called_once_with(username)
             oauth2.OAuth2Session.assert_called_once_with(helper.client_id, token=current_token, scope=helper.scope)
             session.refresh_token.assert_called_once_with(helper.token_endpoint, client_secret=helper.client_secret, client_id=helper.client_id)
             helper.update_token.assert_called_once_with(username, newtoken)
