@@ -127,6 +127,7 @@ class OAuth2Plugin(plugins.SingletonPlugin):
                 pass
 
         # If the authentication via API fails, we can still log in the user using session.
+        print environ
         if user_name is None and 'repoze.who.identity' in environ:
             user_name = environ['repoze.who.identity']['repoze.who.userid']
             log.info('User %s logged using session' % user_name)
@@ -142,38 +143,43 @@ class OAuth2Plugin(plugins.SingletonPlugin):
     def login(self):
         log.debug('login')
 
-        # Log in attemps can be fired on two situations:
-        #   a) The user clicks on the log in button
-        #   b) The user tries to access a protected asset and he/she is not logged in or
-        #      have not got enough privileges.
-        # If the user is already logged, the system mustn't try to log him/her in again but
-        # must redirect the user the previous page and show him/her an error message.
+        # Log in attemps are fired when the user is not logged in and they click
+        # on the log in button
 
-        # Get previous page
-        # Already logged users must not be redirected to the dashboard but the main page.
-        initial_page = '/' if toolkit.c.user else constants.INITIAL_PAGE
-
-        if toolkit.c.user or not 'came_from' in toolkit.request.params:
-            came_from_url = toolkit.request.headers.get('Referer', initial_page)
-        else:
-            came_from_url = toolkit.request.params.get('came_from', constants.INITIAL_PAGE)
-
+        # Get the page where the user was when the loggin attemp was fired
+        came_from_url = toolkit.request.params.get('came_from', constants.INITIAL_PAGE)
         came_from_url_parsed = urlparse(came_from_url)
 
-        # Avoid redirecting to external hosts
+        # When a user is being logged and REFERER == HOME or LOGOUT_PAGE
+        # he/she must be redirected to the dashboard
+        pages = ['/', '/user/logged_out_redirect']
+        if came_from_url_parsed.path in pages:
+            came_from_url = constants.INITIAL_PAGE
+
+        self.oauth2helper.challenge(came_from_url)
+
+    def abort(self, status_code, detail, headers, comment):
+        log.debug('abort')
+
+        # The user is authenticated, but they cannot access to a protected resource so we redirect
+        # them to the previous page. Otherwise the system will try to reauthenticate the user
+        # generating a redirect loop:
+        # (authenticate -> user not allowed -> auto log out -> authenticate -> ...)
+        initial_page = '/'
+        came_from_url = toolkit.request.headers.get('Referer', initial_page)
+        came_from_url_parsed = urlparse(came_from_url)
+
+        # Avoid redirecting users to external hosts
         if came_from_url_parsed.netloc != '' and came_from_url_parsed.netloc != toolkit.request.host:
             came_from_url = initial_page
 
-        if not toolkit.c.user:
-            # When a user is being logged and REFERER == HOME or LOGOUT_PAGE
-            # he/she must be redirected to the dashboard
-            pages = ['/', '/user/logged_out_redirect']
-            if came_from_url_parsed.path in pages:
-                came_from_url = constants.INITIAL_PAGE
+        # Init headers and set Location
+        if headers is None:
+            headers = {}
+        headers['Location'] = came_from_url
 
-            self.oauth2helper.challenge(came_from_url)
-        else:
-            toolkit.redirect_to(bytes(came_from_url))
+        # 302 -> Found
+        return 302, detail, headers, comment
 
     def get_auth_functions(self):
         # we need to prevent some actions being authorized.
