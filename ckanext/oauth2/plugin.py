@@ -146,7 +146,10 @@ class OAuth2Plugin(plugins.SingletonPlugin):
         # on the log in button
 
         # Get the page where the user was when the loggin attemp was fired
-        came_from_url = toolkit.request.params.get('came_from', constants.INITIAL_PAGE)
+        if 'came_from' not in toolkit.request.params:
+            came_from_url = toolkit.request.headers.get('Referer', constants.INITIAL_PAGE)
+        else:
+            came_from_url = toolkit.request.params.get('came_from', constants.INITIAL_PAGE)
         came_from_url_parsed = urlparse(came_from_url)
 
         # When a user is being logged and REFERER == HOME or LOGOUT_PAGE
