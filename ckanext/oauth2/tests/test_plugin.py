@@ -24,6 +24,7 @@ from mock import MagicMock
 from nose_parameterized import parameterized
 
 AUTHORIZATION_HEADER = 'Custom_Header'
+HOST = 'data.lab.fiware.org'
 
 
 class PluginTest(unittest.TestCase):
@@ -180,27 +181,14 @@ class PluginTest(unittest.TestCase):
 
     @parameterized.expand([
         (),
-        ('test', None,                        None,               '/'),
-        ('',     '/about',                    None,               '/about'),
-        ('test', '/about',                    None,               '/about'),
-        ('test', None,                        '/ckan-admin',      '/'),
-        ('test', '/about',                    '/ckan-admin',      '/about'),
-        ('',     None,                        '/ckan-admin',      '/ckan-admin'),
-        ('',     '/about',                    '/ckan-admin',      '/ckan-admin'),
-        ('',     '/',                         None,               '/dashboard'),
-        ('',     '/user/logged_out_redirect', None,               '/dashboard'),
-        ('',     '/',                         '/ckan-admin',      '/ckan-admin'),
-        ('',     '/user/logged_out_redirect', '/ckan-admin',      '/ckan-admin'),
-        ('test', 'http://google.es',          None,               '/'),
-        ('',     'http://google.es',          None,               '/dashboard'),
+        (None,                        '/dashboard'),
+        ('/ckan-admin',               '/ckan-admin'),
+        ('/',                         '/dashboard'),
+        ('/user/logged_out_redirect', '/dashboard')
     ])
-    def test_login(self, user=None, referer=None, came_from=None, expected_referer='/dashboard'):
+    def test_login(self, came_from=None, expected_referer='/dashboard'):
 
-        # The login function will check this variables
-        plugin.toolkit.c.user = user
-        plugin.toolkit.request.headers = {}
-        if referer:
-            plugin.toolkit.request.headers['Referer'] = referer
+        # The login function will check this variable
         plugin.toolkit.request.params = {}
         if came_from:
             plugin.toolkit.request.params['came_from'] = came_from
@@ -208,8 +196,31 @@ class PluginTest(unittest.TestCase):
         # Call the function
         self._plugin.login()
 
-        if not user:
-            plugin.oauth2.OAuth2Helper.return_value.challenge.assert_called_once_with(expected_referer)
-        else:
-            self.assertEquals(0, plugin.toolkit.abort.call_count)
-            plugin.toolkit.redirect_to.assert_called_with(bytes(expected_referer))
+        plugin.oauth2.OAuth2Helper.return_value.challenge.assert_called_once_with(expected_referer)
+
+    @parameterized.expand([
+        (),
+        # Referer without host
+        ('/about',                    None, '/about'),
+        ('/about',                    {},   '/about'),
+        # Referer with different host
+        ('http://google.es',          None, '/'),
+        ('http://google.es',          {},   '/'),
+        # Referer with the same host
+        ('http://' + HOST + '/about', None, 'http://' + HOST + '/about'),
+        ('http://' + HOST + '/about', {},   'http://' + HOST + '/about')
+    ])
+    def test_abort(self, referer=None, headers=None, expected_location='/'):
+
+        # The abort function will check this variable
+        plugin.toolkit.request.host = HOST
+        plugin.toolkit.request.headers = {}
+        if referer:
+            plugin.toolkit.request.headers['Referer'] = referer
+
+        # Call the function
+        status_code, detail, headers, comment = self._plugin.abort(401, None, headers, None)
+
+        # Verifications
+        self.assertEquals(302, status_code)
+        self.assertEquals(headers['Location'], expected_location)
