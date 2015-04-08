@@ -31,7 +31,7 @@ FILAB3_MAIL = "filab3@mailinator.com"
 FILAB_PASSWORD = "filab1234"
 
 
-class BasicLoginDifferentReferer(unittest.TestCase):
+class IntegrationTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -101,6 +101,7 @@ class BasicLoginDifferentReferer(unittest.TestCase):
     def test_user_access_unauthorized_page(self):
         driver = self.driver
         self._log_in(self.base_url)
+        time.sleep(3)   # Wait until the log in proccess is completed
         driver.get(self.base_url + "ckan-admin")
 
         # Check that the user has been redirected to the main page
@@ -113,7 +114,7 @@ class BasicLoginDifferentReferer(unittest.TestCase):
         driver.get(self.base_url + "ckan-admin")
 
         # Check that the user has been redirected to the log in page
-        self.assertEquals(IDM_URL + "/user/sign_in")
+        self.assertEquals(IDM_URL + "/user/sign_in", driver.current_url)
 
         # Log in the user
         self._introduce_log_in_parameters()
