@@ -25,6 +25,11 @@ from nose_parameterized import parameterized
 from selenium import webdriver
 from subprocess import Popen
 
+IDM_URL = "https://account.lab.fiware.org"
+FILAB2_MAIL = "filab2@mailinator.com"
+FILAB3_MAIL = "filab3@mailinator.com"
+FILAB_PASSWORD = "filab1234"
+
 
 class BasicLoginDifferentReferer(unittest.TestCase):
 
@@ -51,19 +56,23 @@ class BasicLoginDifferentReferer(unittest.TestCase):
         self.driver.quit()
         self.assertEqual([], self.verificationErrors)
 
-    def _log_in(self, referer, user_name, password):
+    def _introduce_log_in_parameters(self, username=FILAB2_MAIL, password=FILAB_PASSWORD):
         driver = self.driver
-        driver.get(referer)
-        driver.find_element_by_link_text("Log in").click()
         driver.find_element_by_id("user_email").clear()
-        driver.find_element_by_id("user_email").send_keys(user_name)
+        driver.find_element_by_id("user_email").send_keys(username)
         driver.find_element_by_id("user_password").clear()
         driver.find_element_by_id("user_password").send_keys(password)
         driver.find_element_by_name("commit").click()
 
+    def _log_in(self, referer, username=FILAB2_MAIL, password=FILAB_PASSWORD):
+        driver = self.driver
+        driver.get(referer)
+        driver.find_element_by_link_text("Log in").click()
+        self._introduce_log_in_parameters(username, password)
+
     def test_basic_login(self):
         driver = self.driver
-        self._log_in(self.base_url, "filab2@mailinator.com", "filab1234")
+        self._log_in(self.base_url)
         self.assertEqual("filab2 Example User", driver.find_element_by_link_text("filab2 Example User").text)
         self.assertEqual(self.base_url + 'dashboard', driver.current_url)
         driver.find_element_by_link_text("About").click()
@@ -71,11 +80,11 @@ class BasicLoginDifferentReferer(unittest.TestCase):
         self.assertEqual(self.base_url + "about", driver.current_url)
         driver.find_element_by_css_selector("a[title=\"Edit settings\"]").click()
         time.sleep(3)   # Wait the OAuth2 Server to return the page
-        assert driver.current_url.startswith("https://account.lab.fiware.org/settings")
+        assert driver.current_url.startswith(IDM_URL + "/settings")
 
     def test_basic_login_different_referer(self):
         driver = self.driver
-        self._log_in(self.base_url + "about", "filab2@mailinator.com", "filab1234")
+        self._log_in(self.base_url + "about")
         self.assertEqual("filab2 Example User", driver.find_element_by_css_selector("span.username").text)
         self.assertEqual(self.base_url + "about", driver.current_url)
         driver.find_element_by_link_text("Datasets").click()
@@ -85,13 +94,13 @@ class BasicLoginDifferentReferer(unittest.TestCase):
     def test_user_denies_ckan_access_to_their_account(self):
         # User rejects the application to access his/her information
         driver = self.driver
-        self._log_in(self.base_url, "filab3@mailinator.com", "filab1234")
+        self._log_in(self.base_url, FILAB3_MAIL)
         driver.find_element_by_name("cancel").click()
         assert driver.find_element_by_xpath("//div/div/div/div").text.startswith("The end-user or authorization server denied the request.")
 
     def test_user_access_unauthorized_page(self):
         driver = self.driver
-        self._log_in(self.base_url, "filab2@mailinator.com", "filab1234")
+        self._log_in(self.base_url)
         driver.get(self.base_url + "ckan-admin")
 
         # Check that the user has been redirected to the main page
@@ -99,15 +108,28 @@ class BasicLoginDifferentReferer(unittest.TestCase):
         # Check that an error message is shown
         assert driver.find_element_by_xpath("//div/div/div/div").text.startswith("Need to be system administrator to administer")
 
+    def test_user_access_unauthorized_page_not_logged(self):
+        driver = self.driver
+        driver.get(self.base_url + "ckan-admin")
+
+        # Check that the user has been redirected to the log in page
+        self.assertEquals(IDM_URL + "/user/sign_in")
+
+        # Log in the user
+        self._introduce_log_in_parameters()
+
+        # Check that the user is logged in now
+        self.assertEqual("filab2 Example User", driver.find_element_by_css_selector("span.username").text)
+
     def test_register_btn(self):
         driver = self.driver
         driver.get(self.base_url)
         driver.find_element_by_link_text("Register").click()
-        self.assertEqual("https://account.lab.fiware.org/users/sign_up", driver.current_url)
+        self.assertEqual(IDM_URL + "/users/sign_up", driver.current_url)
 
     @parameterized.expand([
-        ("user/register", "https://account.lab.fiware.org/users/sign_up"),
-        ("user/reset", "https://account.lab.fiware.org/users/password/new")
+        ("user/register", IDM_URL + "/users/sign_up"),
+        ("user/reset", IDM_URL + "/users/password/new")
     ])
     def test_register(self, action, expected_url):
         driver = self.driver
