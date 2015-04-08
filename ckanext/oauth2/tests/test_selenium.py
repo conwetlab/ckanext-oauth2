@@ -53,7 +53,7 @@ class BasicLoginDifferentReferer(unittest.TestCase):
 
     def _log_in(self, referer, user_name, password):
         driver = self.driver
-        driver.get(self.base_url)
+        driver.get(referer)
         driver.find_element_by_link_text("Log in").click()
         driver.find_element_by_id("user_email").clear()
         driver.find_element_by_id("user_email").send_keys(user_name)
@@ -97,7 +97,7 @@ class BasicLoginDifferentReferer(unittest.TestCase):
         # Check that the user has been redirected to the main page
         self.assertEquals(self.base_url, driver.current_url)
         # Check that an error message is shown
-        self.assertEquals(driver.find_element_by_xpath("//div/div/div/div").text, "Need to be system administrator to administer")
+        assert driver.find_element_by_xpath("//div/div/div/div").text.startswith("Need to be system administrator to administer")
 
     def test_register_btn(self):
         driver = self.driver
