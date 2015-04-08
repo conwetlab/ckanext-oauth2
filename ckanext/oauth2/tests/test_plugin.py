@@ -194,7 +194,7 @@ class PluginTest(unittest.TestCase):
     ])
     def test_login(self, referer=None, came_from=None, expected_referer='/dashboard'):
 
-        # The login function will check this variables
+        # The login function will check these variables
         plugin.toolkit.request.headers = {}
         plugin.toolkit.request.params = {}
 
@@ -211,23 +211,25 @@ class PluginTest(unittest.TestCase):
 
     @parameterized.expand([
         (),
-        (None,                        None,               None,                                     '/'),
-        (None,                        None,               {'Param1': 'value1', 'paRam2': 'value2'}, '/'),
-        ('/about',                    None,               None,                                     '/about'),
-        ('/about',                    '/ckan-admin',      None,                                     '/ckan-admin'),
-        (None,                        '/ckan-admin',      None,                                     '/ckan-admin'),
-        ('/',                         None,               None,                                     '/'),
-        ('/user/logged_out_redirect', None,               None,                                     '/'),
-        ('/',                         '/ckan-admin',      None,                                     '/ckan-admin'),
-        ('/user/logged_out_redirect', '/ckan-admin',      None,                                     '/ckan-admin'),
-        ('http://google.es',          None,               None,                                     '/'),
-        ('http://google.es',          None,               None,                                     '/'),
-        ('http://' + HOST + '/about', None,               None,                                     'http://' + HOST + '/about'),
-        ('http://' + HOST + '/about', '/other_url',       None,                                     '/other_url')
+        ('user', None,                        None,               None,                                     '/'),
+        ('user', None,                        None,               {'Param1': 'value1', 'paRam2': 'value2'}, '/'),
+        ('user', '/about',                    None,               None,                                     '/about'),
+        ('user', '/about',                    '/ckan-admin',      None,                                     '/ckan-admin'),
+        ('user', None,                        '/ckan-admin',      None,                                     '/ckan-admin'),
+        ('user', '/',                         None,               None,                                     '/'),
+        ('user', '/user/logged_out_redirect', None,               None,                                     '/'),
+        ('user', '/',                         '/ckan-admin',      None,                                     '/ckan-admin'),
+        ('user', '/user/logged_out_redirect', '/ckan-admin',      None,                                     '/ckan-admin'),
+        ('user', 'http://google.es',          None,               None,                                     '/'),
+        ('user', 'http://google.es',          None,               None,                                     '/'),
+        ('user', 'http://' + HOST + '/about', None,               None,                                     'http://' + HOST + '/about'),
+        ('user', 'http://' + HOST + '/about', '/other_url',       None,                                     '/other_url'),
+        (None,   '/about',                    '/other',           None,                                     None),
     ])
-    def test_abort(self, referer=None, came_from=None, headers=None, expected_location='/'):
+    def test_abort(self, user='user', referer=None, came_from=None, headers=None, expected_location='/'):
 
-        # The abort function will check this variable
+        # The abort function will check these variables
+        plugin.toolkit.c.user = user
         plugin.toolkit.request.host = HOST
         plugin.toolkit.request.headers = {}
         plugin.toolkit.request.params = {}
@@ -238,19 +240,28 @@ class PluginTest(unittest.TestCase):
         if came_from:
             plugin.toolkit.request.params['came_from'] = came_from
 
-        # Save previous headers (if they are not None) and check that
-        # they are kept and not discarded
-        headers_copy = None if not headers else headers.copy()
-
         # Call the function
-        status_code, detail, new_headers, comment = self._plugin.abort(401, None, headers, None)
+        initial_status_code = 401
+        initial_detail = 'DETAIL'
+        initial_headers = None if not headers else headers.copy()
+        initial_comment = 'COMMENT'
+
+        # headers will be modified inside the function, but we should retain a copy (initial_headers)
+        status_code, detail, new_headers, comment = self._plugin.abort(initial_status_code, initial_detail, headers, initial_comment)
 
         # Verifications
-        self.assertEquals(302, status_code)
-        self.assertEquals(new_headers['Location'], expected_location)
+        self.assertEquals(initial_detail, detail)
+        self.assertEquals(initial_comment, comment)
+
+        if user:
+            self.assertEquals(302, status_code)
+            self.assertEquals(new_headers['Location'], expected_location)
+        else:
+            self.assertEquals(initial_status_code, status_code)
+            self.assertEquals(initial_headers, new_headers)
 
         # Check previous headers if they were not None
-        if headers_copy:
-            for header in headers_copy:
+        if initial_headers:
+            for header in initial_headers:
                 self.assertIn(header, new_headers)
-                self.assertEquals(headers_copy[header], new_headers[header])
+                self.assertEquals(initial_headers[header], new_headers[header])
