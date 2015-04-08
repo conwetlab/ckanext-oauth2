@@ -51,15 +51,19 @@ class BasicLoginDifferentReferer(unittest.TestCase):
         self.driver.quit()
         self.assertEqual([], self.verificationErrors)
 
-    def test_basic_login(self):
+    def _log_in(self, referer, user_name, password):
         driver = self.driver
         driver.get(self.base_url)
         driver.find_element_by_link_text("Log in").click()
         driver.find_element_by_id("user_email").clear()
-        driver.find_element_by_id("user_email").send_keys("filab2@mailinator.com")
+        driver.find_element_by_id("user_email").send_keys(user_name)
         driver.find_element_by_id("user_password").clear()
-        driver.find_element_by_id("user_password").send_keys("filab1234")
+        driver.find_element_by_id("user_password").send_keys(password)
         driver.find_element_by_name("commit").click()
+
+    def test_basic_login(self):
+        driver = self.driver
+        self._log_in(self.base_url, "filab2@mailinator.com", "filab1234")
         self.assertEqual("filab2 Example User", driver.find_element_by_link_text("filab2 Example User").text)
         self.assertEqual(self.base_url + 'dashboard', driver.current_url)
         driver.find_element_by_link_text("About").click()
@@ -71,13 +75,7 @@ class BasicLoginDifferentReferer(unittest.TestCase):
 
     def test_basic_login_different_referer(self):
         driver = self.driver
-        driver.get(self.base_url + "about")
-        driver.find_element_by_link_text("Log in").click()
-        driver.find_element_by_id("user_email").clear()
-        driver.find_element_by_id("user_email").send_keys("filab2@mailinator.com")
-        driver.find_element_by_id("user_password").clear()
-        driver.find_element_by_id("user_password").send_keys("filab1234")
-        driver.find_element_by_name("commit").click()
+        self._log_in(self.base_url + "about", "filab2@mailinator.com", "filab1234")
         self.assertEqual("filab2 Example User", driver.find_element_by_css_selector("span.username").text)
         self.assertEqual(self.base_url + "about", driver.current_url)
         driver.find_element_by_link_text("Datasets").click()
@@ -85,16 +83,21 @@ class BasicLoginDifferentReferer(unittest.TestCase):
         self.assertEqual(self.base_url + "dataset", driver.current_url)
 
     def test_user_unauthorized(self):
+        # User rejects the application to access his/her information
         driver = self.driver
-        driver.get(self.base_url)
-        driver.find_element_by_link_text("Log in").click()
-        driver.find_element_by_id("user_email").clear()
-        driver.find_element_by_id("user_email").send_keys("filab3@mailinator.com")
-        driver.find_element_by_id("user_password").clear()
-        driver.find_element_by_id("user_password").send_keys("filab1234")
-        driver.find_element_by_name("commit").click()
+        self._log_in(self.base_url, "filab3@mailinator.com", "filab1234")
         driver.find_element_by_name("cancel").click()
         assert driver.find_element_by_xpath("//div/div/div/div").text.startswith("The end-user or authorization server denied the request.")
+
+    def test_user_access_unauthorized_page(self):
+        driver = self.driver
+        self._log_in(self.base_url, "filab2@mailinator.com", "filab1234")
+        driver.get(self.base_url + "ckan-admin")
+
+        # Check that the user has been redirected to the main page
+        self.assertEquals(self.base_url, driver.current_url)
+        # Check that an error message is shown
+        self.assertEquals(driver.find_element_by_xpath("//div/div/div/div").text, "Need to be system administrator to administer")
 
     def test_register_btn(self):
         driver = self.driver
