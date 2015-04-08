@@ -114,7 +114,7 @@ class IntegrationTest(unittest.TestCase):
         driver.get(self.base_url + "ckan-admin")
 
         # Check that the user has been redirected to the log in page
-        self.assertEquals(IDM_URL + "/user/sign_in", driver.current_url)
+        self.assertEquals(IDM_URL + "/users/sign_in", driver.current_url)
 
         # Log in the user
         self._introduce_log_in_parameters()
