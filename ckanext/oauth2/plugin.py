@@ -180,7 +180,8 @@ class OAuth2Plugin(plugins.SingletonPlugin):
         # will try to reauthenticate the user generating a redirect loop:
         # (authenticate -> user not allowed -> auto log out -> authenticate -> ...)
         # If the user is not authenticated, the system should start the authentication process
-        if toolkit.c.user:
+
+        if toolkit.c.user:  # USER IS AUTHENTICATED
             # When the user is logged in, he/she should be redirected to the main page when
             # the system cannot get the previous page
             came_from_url = self._get_previous_page('/')
@@ -192,7 +193,7 @@ class OAuth2Plugin(plugins.SingletonPlugin):
 
             # 302 -> Found
             return 302, detail, headers, comment
-        else:
+        else:                # USER IS NOT AUTHENTICATED
             # By not modifying the received parameters, the authentication process will start
             return status_code, detail, headers, comment
 
