@@ -24,6 +24,7 @@ from mock import MagicMock
 from nose_parameterized import parameterized
 
 AUTHORIZATION_HEADER = 'Custom_Header'
+HOST = 'data.lab.fiware.org'
 
 
 class PluginTest(unittest.TestCase):
@@ -180,36 +181,76 @@ class PluginTest(unittest.TestCase):
 
     @parameterized.expand([
         (),
-        ('test', None,                        None,               '/'),
-        ('',     '/about',                    None,               '/about'),
-        ('test', '/about',                    None,               '/about'),
-        ('test', None,                        '/ckan-admin',      '/'),
-        ('test', '/about',                    '/ckan-admin',      '/about'),
-        ('',     None,                        '/ckan-admin',      '/ckan-admin'),
-        ('',     '/about',                    '/ckan-admin',      '/ckan-admin'),
-        ('',     '/',                         None,               '/dashboard'),
-        ('',     '/user/logged_out_redirect', None,               '/dashboard'),
-        ('',     '/',                         '/ckan-admin',      '/ckan-admin'),
-        ('',     '/user/logged_out_redirect', '/ckan-admin',      '/ckan-admin'),
-        ('test', 'http://google.es',          None,               '/'),
-        ('',     'http://google.es',          None,               '/dashboard'),
+        (None,                        None,               '/dashboard'),
+        ('/about',                    None,               '/about'),
+        ('/about',                    '/ckan-admin',      '/ckan-admin'),
+        (None,                        '/ckan-admin',      '/ckan-admin'),
+        ('/',                         None,               '/dashboard'),
+        ('/user/logged_out_redirect', None,               '/dashboard'),
+        ('/',                         '/ckan-admin',      '/ckan-admin'),
+        ('/user/logged_out_redirect', '/ckan-admin',      '/ckan-admin'),
+        ('http://google.es',          None,               '/dashboard'),
+        ('http://google.es',          None,               '/dashboard')
     ])
-    def test_login(self, user=None, referer=None, came_from=None, expected_referer='/dashboard'):
+    def test_login(self, referer=None, came_from=None, expected_referer='/dashboard'):
 
         # The login function will check this variables
-        plugin.toolkit.c.user = user
         plugin.toolkit.request.headers = {}
+        plugin.toolkit.request.params = {}
+
         if referer:
             plugin.toolkit.request.headers['Referer'] = referer
-        plugin.toolkit.request.params = {}
+
         if came_from:
             plugin.toolkit.request.params['came_from'] = came_from
 
         # Call the function
         self._plugin.login()
 
-        if not user:
-            plugin.oauth2.OAuth2Helper.return_value.challenge.assert_called_once_with(expected_referer)
-        else:
-            self.assertEquals(0, plugin.toolkit.abort.call_count)
-            plugin.toolkit.redirect_to.assert_called_with(bytes(expected_referer))
+        plugin.oauth2.OAuth2Helper.return_value.challenge.assert_called_once_with(expected_referer)
+
+    @parameterized.expand([
+        (),
+        (None,                        None,               None,                                     '/'),
+        (None,                        None,               {'Param1': 'value1', 'paRam2': 'value2'}, '/'),
+        ('/about',                    None,               None,                                     '/about'),
+        ('/about',                    '/ckan-admin',      None,                                     '/ckan-admin'),
+        (None,                        '/ckan-admin',      None,                                     '/ckan-admin'),
+        ('/',                         None,               None,                                     '/'),
+        ('/user/logged_out_redirect', None,               None,                                     '/'),
+        ('/',                         '/ckan-admin',      None,                                     '/ckan-admin'),
+        ('/user/logged_out_redirect', '/ckan-admin',      None,                                     '/ckan-admin'),
+        ('http://google.es',          None,               None,                                     '/'),
+        ('http://google.es',          None,               None,                                     '/'),
+        ('http://' + HOST + '/about', None,               None,                                     'http://' + HOST + '/about'),
+        ('http://' + HOST + '/about', '/other_url',       None,                                     '/other_url')
+    ])
+    def test_abort(self, referer=None, came_from=None, headers=None, expected_location='/'):
+
+        # The abort function will check this variable
+        plugin.toolkit.request.host = HOST
+        plugin.toolkit.request.headers = {}
+        plugin.toolkit.request.params = {}
+
+        if referer:
+            plugin.toolkit.request.headers['Referer'] = referer
+
+        if came_from:
+            plugin.toolkit.request.params['came_from'] = came_from
+
+        # Save previous headers (if they are not None) and check that
+        # they are kept and not discarded
+        headers_copy = None if not headers else headers.copy()
+
+        # Call the function
+        status_code, detail, new_headers, comment = self._plugin.abort(401, None, headers, None)
+
+        # Verifications
+        self.assertEquals(302, status_code)
+        self.assertEquals(new_headers['Location'], expected_location)
+
+        # Check previous headers if they were not None
+        if headers_copy:
+            for header in headers_copy:
+                self.assertIn(header, new_headers)
+                self.assertEquals(headers_copy[header], new_headers[header])
