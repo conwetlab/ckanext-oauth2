@@ -139,6 +139,26 @@ class OAuth2Plugin(plugins.SingletonPlugin):
         else:
             log.warn('The user is not currently logged...')
 
+    def _get_previous_page(self, default_page):
+        if 'came_from' not in toolkit.request.params:
+            came_from_url = toolkit.request.headers.get('Referer', default_page)
+        else:
+            came_from_url = toolkit.request.params.get('came_from', default_page)
+
+        came_from_url_parsed = urlparse(came_from_url)
+
+        # Avoid redirecting users to external hosts
+        if came_from_url_parsed.netloc != '' and came_from_url_parsed.netloc != toolkit.request.host:
+            came_from_url = default_page
+
+        # When a user is being logged and REFERER == HOME or LOGOUT_PAGE
+        # he/she must be redirected to the dashboard
+        pages = ['/', '/user/logged_out_redirect']
+        if came_from_url_parsed.path in pages:
+            came_from_url = default_page
+
+        return came_from_url
+
     def login(self):
         log.debug('login')
 
@@ -146,17 +166,9 @@ class OAuth2Plugin(plugins.SingletonPlugin):
         # on the log in button
 
         # Get the page where the user was when the loggin attemp was fired
-        if 'came_from' not in toolkit.request.params:
-            came_from_url = toolkit.request.headers.get('Referer', constants.INITIAL_PAGE)
-        else:
-            came_from_url = toolkit.request.params.get('came_from', constants.INITIAL_PAGE)
-        came_from_url_parsed = urlparse(came_from_url)
-
-        # When a user is being logged and REFERER == HOME or LOGOUT_PAGE
-        # he/she must be redirected to the dashboard
-        pages = ['/', '/user/logged_out_redirect']
-        if came_from_url_parsed.path in pages:
-            came_from_url = constants.INITIAL_PAGE
+        # When the user is not logged in, he/she should be redirected to the dashboard when
+        # the system cannot get the previous page
+        came_from_url = self._get_previous_page(constants.INITIAL_PAGE)
 
         self.oauth2helper.challenge(came_from_url)
 
@@ -167,13 +179,10 @@ class OAuth2Plugin(plugins.SingletonPlugin):
         # them to the previous page. Otherwise the system will try to reauthenticate the user
         # generating a redirect loop:
         # (authenticate -> user not allowed -> auto log out -> authenticate -> ...)
-        initial_page = '/'
-        came_from_url = toolkit.request.headers.get('Referer', initial_page)
-        came_from_url_parsed = urlparse(came_from_url)
 
-        # Avoid redirecting users to external hosts
-        if came_from_url_parsed.netloc != '' and came_from_url_parsed.netloc != toolkit.request.host:
-            came_from_url = initial_page
+        # When the user is logged in, he/she should be redirected to the main page when
+        # the system cannot get the previous page
+        came_from_url = self._get_previous_page('/')
 
         # Init headers and set Location
         if headers is None:
