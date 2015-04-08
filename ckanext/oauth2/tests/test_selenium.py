@@ -82,7 +82,7 @@ class BasicLoginDifferentReferer(unittest.TestCase):
         self.assertEqual("filab2 Example User", driver.find_element_by_css_selector("span.username").text)
         self.assertEqual(self.base_url + "dataset", driver.current_url)
 
-    def test_user_unauthorized(self):
+    def test_user_denies_ckan_access_to_their_account(self):
         # User rejects the application to access his/her information
         driver = self.driver
         self._log_in(self.base_url, "filab3@mailinator.com", "filab1234")
