@@ -175,22 +175,26 @@ class OAuth2Plugin(plugins.SingletonPlugin):
     def abort(self, status_code, detail, headers, comment):
         log.debug('abort')
 
-        # The user is authenticated, but they cannot access to a protected resource so we redirect
-        # them to the previous page. Otherwise the system will try to reauthenticate the user
-        # generating a redirect loop:
+        # If the user is authenticated, but they cannot access a protected resource, the system
+        # should redirect them to the previous page. If the user is not redirected, the system
+        # will try to reauthenticate the user generating a redirect loop:
         # (authenticate -> user not allowed -> auto log out -> authenticate -> ...)
+        # If the user is not authenticated, the system should start the authentication process
+        if toolkit.c.user:
+            # When the user is logged in, he/she should be redirected to the main page when
+            # the system cannot get the previous page
+            came_from_url = self._get_previous_page('/')
 
-        # When the user is logged in, he/she should be redirected to the main page when
-        # the system cannot get the previous page
-        came_from_url = self._get_previous_page('/')
+            # Init headers and set Location
+            if headers is None:
+                headers = {}
+            headers['Location'] = came_from_url
 
-        # Init headers and set Location
-        if headers is None:
-            headers = {}
-        headers['Location'] = came_from_url
-
-        # 302 -> Found
-        return 302, detail, headers, comment
+            # 302 -> Found
+            return 302, detail, headers, comment
+        else:
+            # By not modifying the received parameters, the authentication process will start
+            return status_code, detail, headers, comment
 
     def get_auth_functions(self):
         # we need to prevent some actions being authorized.
