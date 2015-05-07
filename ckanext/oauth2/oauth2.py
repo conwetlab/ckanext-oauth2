@@ -20,6 +20,7 @@
 
 from __future__ import unicode_literals
 
+import base64
 import ckan.model as model
 import constants
 import db
@@ -79,14 +80,24 @@ class OAuth2Helper(object):
 
     def get_token(self):
         oauth = OAuth2Session(self.client_id, redirect_uri=self._redirect_uri(toolkit.request), scope=self.scope)
+
+        # Just because of FIWARE Authentication
+        headers = {
+            'Accept': 'application/json',
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': 'Basic %s' % base64.urlsafe_b64encode(
+                '%s:%s' % (self.client_id, self.client_secret)
+            )
+        }
         token = oauth.fetch_token(self.token_endpoint,
+                                  headers=headers,
                                   client_secret=self.client_secret,
                                   authorization_response=toolkit.request.url)
         return token
 
     def identify(self, token):
         oauth = OAuth2Session(self.client_id, token=token)
-        profile_response = oauth.get(self.profile_api_url)
+        profile_response = oauth.get(self.profile_api_url + '?access_token=%s' % token['access_token'])
 
         # Token can be invalid
         if not profile_response.ok:
