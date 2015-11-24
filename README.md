@@ -5,6 +5,8 @@ The OAuth2 extension allows site visitors to login through an OAuth2 server.
 
 **Note**: This extension has been tested in CKAN 2.2 and 2.3. It may not work in other versions.
 
+**Note**: If you want to use the FIWARE IdM, use the code on `fiware-migration` branch. 
+
 
 Links
 -------------------------
