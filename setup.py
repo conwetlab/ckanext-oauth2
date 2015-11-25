@@ -62,8 +62,8 @@ setup(
     The OAuth2 extension allows site visitors to login through an OAuth2 server.
     ''',
     keywords='CKAN, OAuth2',
-    author='Axel Haustant',
-    author_email='axel.haustant@etalab2.fr',
+    author='Aitor Magán',
+    author_email='amagan@conwet.com',
     url='https://github.com/conwetlab/ckanext-oauth2',
     download_url='https://github.com/conwetlab/ckanext-oauth2/tarball/v' + __version__,
     license='',
