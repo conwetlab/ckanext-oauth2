@@ -48,17 +48,19 @@ def rst(filename):
     return content
 
 
-long_description = '\n'.join((
-    rst('README.md'),
-    rst('CHANGELOG.rst'),
-    ''
-))
+# long_description = '\n'.join((
+#     rst('README.md'),
+#     rst('CHANGELOG.rst'),
+#     ''
+# ))
 
 setup(
     name='ckanext-oauth2',
     version=__version__,
     description=__description__,
-    # long_description=long_description,
+    long_description='''
+    The OAuth2 extension allows site visitors to login through an OAuth2 server.
+    ''',
     keywords='CKAN, OAuth2',
     author='Axel Haustant',
     author_email='axel.haustant@etalab2.fr',
