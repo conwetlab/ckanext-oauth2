@@ -58,26 +58,35 @@ setup(
     name='ckanext-oauth2',
     version=__version__,
     description=__description__,
-    long_description=long_description,
+    # long_description=long_description,
     keywords='CKAN, OAuth2',
     author='Axel Haustant',
     author_email='axel.haustant@etalab2.fr',
     url='https://github.com/conwetlab/ckanext-oauth2',
+    download_url='https://github.com/conwetlab/ckanext-oauth2/tarball/v' + __version__,
     license='',
     packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
     namespace_packages=['ckanext'],
     include_package_data=True,
     zip_safe=False,
+    setup_requires=[
+        'nose>=1.3.0'
+    ],
     install_requires=[
         'requests-oauthlib==0.5.0',
     ],
+    tests_require=[
+        'nose_parameterized==0.3.3',
+        'selenium==2.46.0'
+    ],
+    test_suite='nosetests',
     entry_points={
         'ckan.plugins': [
             'oauth2 = ckanext.oauth2.plugin:OAuth2Plugin',
         ]
     },
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 5 - Production/Stable",
         "Environment :: Web Environment",
         'Framework :: Pylons',
         'Intended Audience :: Developers',
