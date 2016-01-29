@@ -22,8 +22,8 @@ import re
 
 from setuptools import setup, find_packages
 
-from ckanext.oauth2 import __version__, __description__
-
+__version__ = '0.3.7'
+__description__ = 'OAuth2 support for CKAN'
 
 PYPI_RST_FILTERS = (
     # Remove travis ci badge
