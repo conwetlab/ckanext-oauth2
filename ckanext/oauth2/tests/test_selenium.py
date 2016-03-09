@@ -21,6 +21,7 @@ import unittest
 import os
 import time
 
+from urlparse import urljoin
 from nose_parameterized import parameterized
 from selenium import webdriver
 from subprocess import Popen
@@ -40,29 +41,48 @@ class IntegrationTest(unittest.TestCase):
         env['OAUTHLIB_INSECURE_TRANSPORT'] = 'True'
         cls._process = Popen(['paster', 'serve', 'test-fiware.ini'], env=env)
 
+        if 'WEB_DRIVER_URL' in os.environ and 'CKAN_SERVER_URL' in os.environ:
+            cls.driver = webdriver.Remote(os.environ['WEB_DRIVER_URL'], webdriver.DesiredCapabilities.FIREFOX.copy())
+            cls.base_url = os.environ['CKAN_SERVER_URL']
+        else:
+            cls.driver = webdriver.Firefox()
+            cls.base_url = 'http://localhost:5000/'
+
+        cls.driver.implicitly_wait(5)
+        cls.driver.set_window_size(1024, 768)
+
+        cls.driver.get(urljoin(IDM_URL, '/idm/myApplications/361020fd7cf64456890dd98da88e64f3/edit/'))
+        cls._introduce_log_in_parameters()
+        cls.driver.find_element_by_id("id_callbackurl").clear()
+        cls.driver.find_element_by_id("id_callbackurl").send_keys(urljoin(cls.base_url, '/oauth2/callback'))
+        cls.driver.find_element_by_xpath("//button[@type='submit']").click()
+
     @classmethod
     def tearDownClass(cls):
         cls._process.terminate()
+        cls.driver.quit()
 
-    def setUp(self):
-        self.driver = webdriver.Firefox()
-        self.driver.implicitly_wait(5)
-        self.driver.set_window_size(1024, 768)
-        self.base_url = "http://localhost:5000/"
-        self.verificationErrors = []
-        self.accept_next_alert = True
-
-    def tearDown(self):
-        self.driver.quit()
-        self.assertEqual([], self.verificationErrors)
-
-    def _introduce_log_in_parameters(self, username=FILAB2_MAIL, password=FILAB_PASSWORD):
-        driver = self.driver
+    @classmethod
+    def _introduce_log_in_parameters(cls, username=FILAB2_MAIL, password=FILAB_PASSWORD):
+        driver = cls.driver
         driver.find_element_by_id("id_username").clear()
         driver.find_element_by_id("id_username").send_keys(username)
         driver.find_element_by_id("id_password").clear()
         driver.find_element_by_id("id_password").send_keys(password)
         driver.find_element_by_xpath("//button[@type='submit']").click()
+
+    def delete_cookies(self, domain):
+        self.driver.get(domain)
+        self.driver.delete_all_cookies()
+
+    def setUp(self):
+        self.delete_cookies(IDM_URL)
+        self.delete_cookies(self.base_url)
+        self.verificationErrors = []
+        self.accept_next_alert = True
+
+    def tearDown(self):
+        self.assertEqual([], self.verificationErrors)
 
     def _log_in(self, referer, username=FILAB2_MAIL, password=FILAB_PASSWORD, authorize=True):
         driver = self.driver
@@ -122,6 +142,9 @@ class IntegrationTest(unittest.TestCase):
 
         # Log in the user
         self._introduce_log_in_parameters()
+
+        if driver.current_url.startswith(IDM_URL):
+            driver.find_element_by_xpath("//button[@type='submit']").click()
 
         # Check that the user is logged in now
         self.assertEqual("filab2 Example User", driver.find_element_by_css_selector("span.username").text)

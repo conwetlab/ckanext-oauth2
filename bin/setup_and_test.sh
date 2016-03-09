@@ -6,12 +6,13 @@ export PATH=$PATH:/usr/local/bin
 export PIP_DOWNLOAD_CACHE=~/.pip_cache
 
 WD=`pwd`
+DB_HOST_IP=${DB_HOST_IP:=127.0.0.1}
 POSTGRES_PORT=${POSTGRES_PORT:=5432}
 
 echo "Downloading CKAN..."
 git clone https://github.com/ckan/ckan
 cd ckan
-git checkout release-v2.3
+git checkout release-v2.5.2
 cd $WD
 
 
@@ -30,7 +31,7 @@ then
     if [ ! -d "$CACHE_DIR/$SOLAR_UNZIP_FOLDER" ]
     then
         # Download the solar installation file if it does not exist
-        wget --quiet --timestamping --directory-prefix=$CACHE_DIR http://apache.rediris.es/lucene/solr/4.8.1/$FILE
+        wget --no-verbose --timestamping --directory-prefix=$CACHE_DIR https://archive.apache.org/dist/lucene/solr/4.8.1/$FILE
 
         # Unzip the folder
         tar -xf "$CACHE_DIR/$FILE" --directory "$CACHE_DIR"
@@ -61,8 +62,8 @@ pip install --upgrade pip
 echo "Installing CKAN dependencies..."
 cd ckan
 python setup.py develop
-pip install -r requirements.txt --allow-all-external
-pip install -r dev-requirements.txt --allow-all-external
+pip install -r requirements.txt
+pip install -r dev-requirements.txt
 cd ..
 
 
@@ -81,15 +82,15 @@ sudo -u postgres psql -c "CREATE DATABASE datastore_test WITH OWNER ckan_default
 echo "Modifying the configuration to setup properly the Postgres port..."
 mkdir -p data/storage
 echo "
-sqlalchemy.url = postgresql://ckan_default:pass@localhost:$POSTGRES_PORT/ckan_test
-ckan.datastore.write_url = postgresql://ckan_default:pass@localhost:$POSTGRES_PORT/datastore_test
-ckan.datastore.read_url = postgresql://datastore_default:pass@localhost:$POSTGRES_PORT/datastore_test
+sqlalchemy.url = postgresql://ckan_default:pass@$DB_HOST_IP:$POSTGRES_PORT/ckan_test
+ckan.datastore.write_url = postgresql://ckan_default:pass@$DB_HOST_IP:$POSTGRES_PORT/datastore_test
+ckan.datastore.read_url = postgresql://datastore_default:pass@$DB_HOST_IP:$POSTGRES_PORT/datastore_test
 
 ckan.storage_path=data/storage" >> test.ini
 
 
 echo "Initializing the database..."
-sed -i "s/\(postgresql:\/\/.\+@localhost\)/\1:$POSTGRES_PORT/g" ckan/test-core.ini 
+sed -i "s/\(postgresql:\/\/.\+\)@localhost\(:[0-9]\+\)\?/\1@$DB_HOST_IP:$POSTGRES_PORT/g" ckan/test-core.ini
 cd ckan
 paster db init -c test-core.ini
 cd ..
