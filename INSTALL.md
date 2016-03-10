@@ -26,6 +26,8 @@ ckan.oauth2.profile_api_user_field = JSON_FIELD_TO_FIND_THE_USER_IDENTIFIER
 ckan.oauth2.profile_api_fullname_field = JSON_FIELD_TO_FIND_THE_USER_FULLNAME
 ckan.oauth2.profile_api_mail_field = JSON_FIELD_TO_FIND_THE_USER_MAIL
 ckan.oauth2.authorization_header = OAUTH2_HEADER
+ckan.oauth2.profile_api_groupmembership_field = JSON_FIELD_TO_FIND_THE_USER_GROUP_MEMBERSHIP
+ckan.oauth2.sysadmin_group_name = VERIFIED_GROUPNAME_FOR_SYSADMIN
 ```
 
 **Additional notes**:

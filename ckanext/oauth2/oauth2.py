@@ -56,6 +56,9 @@ class OAuth2Helper(object):
         self.profile_api_user_field = config.get('ckan.oauth2.profile_api_user_field', None)
         self.profile_api_fullname_field = config.get('ckan.oauth2.profile_api_fullname_field', None)
         self.profile_api_mail_field = config.get('ckan.oauth2.profile_api_mail_field', None)
+        self.profile_api_groupmembership_field = config.get('ckan.oauth2.profile_api_groupmembership_field', None)
+        self.sysadmin_group_name = config.get('ckan.oauth2.sysadmin_group_name', None)
+
 
         # Init db
         db.init_db(model)
@@ -111,6 +114,13 @@ class OAuth2Helper(object):
             # Update mail
             if self.profile_api_mail_field and self.profile_api_mail_field in user_data:
                 user.email = user_data[self.profile_api_mail_field]
+
+             # Update sysadmin status
+            if self.profile_api_groupmembership_field and self.profile_api_groupmembership_field in user_data:
+                if self.sysadmin_group_name and self.sysadmin_group_name in user_data[self.profile_api_groupmembership_field]:
+                    user.sysadmin = True
+                else:
+                    user.sysadmin = False
 
             # Save the user in the database
             model.Session.add(user)
