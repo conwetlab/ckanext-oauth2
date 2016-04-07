@@ -24,14 +24,14 @@ then
     
     echo "Downloading Solr..."
     CACHE_DIR=~/.cache
-    FILE=solr-4.8.1.tgz
-    SOLAR_UNZIP_FOLDER=solr-4.8.1
+    FILE=solr-4.10.4.tgz
+    SOLAR_UNZIP_FOLDER=solr-4.10.4
 
     # If the solar folder does not exist, we have to build it
     if [ ! -d "$CACHE_DIR/$SOLAR_UNZIP_FOLDER" ]
     then
         # Download the solar installation file if it does not exist
-        wget --no-verbose --timestamping --directory-prefix=$CACHE_DIR https://archive.apache.org/dist/lucene/solr/4.8.1/$FILE
+        wget --no-verbose --timestamping --directory-prefix=$CACHE_DIR http://ftp.cixug.es/apache/lucene/solr/4.10.4//$FILE
 
         # Unzip the folder
         tar -xf "$CACHE_DIR/$FILE" --directory "$CACHE_DIR"
@@ -44,7 +44,7 @@ then
     ln -s "$CACHE_DIR/$SOLAR_UNZIP_FOLDER" .
     mv "$SOLAR_UNZIP_FOLDER/example/solr/collection1/conf/schema.xml"  "$SOLAR_UNZIP_FOLDER/example/solr/collection1/conf/schema.xml.bak"
     ln -s $WD/ckan/ckan/config/solr/schema.xml "$SOLAR_UNZIP_FOLDER/example/solr/collection1/conf/schema.xml"
-    cd solr-4.8.1/example
+    cd $SOLAR_UNZIP_FOLDER/example
     java -jar start.jar 2>&1 > /dev/null &
     cd $WD
 
