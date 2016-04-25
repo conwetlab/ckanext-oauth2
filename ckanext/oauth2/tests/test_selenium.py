@@ -51,8 +51,9 @@ class IntegrationTest(unittest.TestCase):
         cls.driver.implicitly_wait(5)
         cls.driver.set_window_size(1024, 768)
 
-        cls.driver.get(urljoin(IDM_URL, '/idm/myApplications/361020fd7cf64456890dd98da88e64f3/edit/'))
+        cls.driver.get(IDM_URL)
         cls._introduce_log_in_parameters()
+        cls.driver.get(urljoin(IDM_URL, '/idm/myApplications/361020fd7cf64456890dd98da88e64f3/edit/'))
         cls.driver.find_element_by_id("id_callbackurl").clear()
         cls.driver.find_element_by_id("id_callbackurl").send_keys(urljoin(cls.base_url, '/oauth2/callback'))
         cls.driver.find_element_by_xpath("//button[@type='submit']").click()
