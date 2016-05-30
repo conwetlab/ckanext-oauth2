@@ -31,7 +31,7 @@ then
     if [ ! -d "$CACHE_DIR/$SOLAR_UNZIP_FOLDER" ]
     then
         # Download the solar installation file if it does not exist
-        wget --no-verbose --timestamping --directory-prefix=$CACHE_DIR http://ftp.cixug.es/apache/lucene/solr/4.10.4//$FILE
+        wget --no-verbose --timestamping --directory-prefix=$CACHE_DIR http://archive.apache.org/dist/lucene/solr/4.10.4/$FILE
 
         # Unzip the folder
         tar -xf "$CACHE_DIR/$FILE" --directory "$CACHE_DIR"
