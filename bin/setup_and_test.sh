@@ -59,6 +59,10 @@ source virtualenv/bin/activate
 pip install --upgrade pip
 
 
+# Force html5lib version to be used
+pip install html5lib==0.9999999
+
+
 echo "Installing CKAN dependencies..."
 cd ckan
 python setup.py develop
