@@ -24,6 +24,7 @@ import oauth2
 import ckan.lib.helpers as helpers
 import ckan.lib.base as base
 
+from ckan.common import session
 from ckanext.oauth2.plugin import toolkit
 
 
@@ -43,6 +44,8 @@ class OAuth2Controller(base.BaseController):
             self.oauth2helper.update_token(user_name, token)
             self.oauth2helper.redirect_from_callback()
         except Exception as e:
+
+            session.save()
 
             # If the callback is called with an error, we must show the message
             error_description = toolkit.request.GET.get('error_description')
