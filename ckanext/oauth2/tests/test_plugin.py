@@ -37,8 +37,6 @@ class PluginTest(unittest.TestCase):
         self._toolkit = plugin.toolkit
         plugin.toolkit = MagicMock()
 
-        self._session = plugin.session
-        plugin.session = MagicMock()
 
         self._oauth2 = plugin.oauth2
         plugin.oauth2 = MagicMock()
@@ -50,7 +48,6 @@ class PluginTest(unittest.TestCase):
         # Unmock functions
         plugin.config = self._config
         plugin.toolkit = self._toolkit
-        plugin.session = self._session
 
     def _set_identity(self, identity):
         plugin.toolkit.request.environ = {}
@@ -166,7 +163,6 @@ class PluginTest(unittest.TestCase):
             self.assertEquals(0, plugin.oauth2.OAuth2Helper.return_value.identify.call_count)
 
         self.assertEquals(expected_user, plugin.toolkit.c.user)
-        plugin.session.save.assert_called_once()
 
         if expected_user is None:
             self.assertIsNone(plugin.toolkit.c.usertoken)

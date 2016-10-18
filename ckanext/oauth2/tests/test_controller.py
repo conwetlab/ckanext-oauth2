@@ -57,6 +57,9 @@ class OAuth2PluginTest(unittest.TestCase):
         self._toolkit = controller.toolkit
         controller.toolkit = MagicMock()
 
+        self.__session = controller.session
+        controller.session = MagicMock()
+
         self.controller = controller.OAuth2Controller()
 
     def tearDown(self):
@@ -64,6 +67,7 @@ class OAuth2PluginTest(unittest.TestCase):
         controller.helpers = self._helpers
         controller.oauth2 = self._oauth2
         controller.toolkit = self._toolkit
+        controller.session = self.__session
 
     def generate_state(self, url):
         return b64encode(bytes(json.dumps({CAME_FROM_FIELD: url})))
@@ -118,6 +122,7 @@ class OAuth2PluginTest(unittest.TestCase):
         self.controller.callback()
 
         # Check the state and the location
+        controller.session.save.assert_called_once_with()
         self.assertEquals(RETURNED_STATUS, controller.toolkit.response.status_int)
         self.assertEquals(came_from, controller.toolkit.response.location)
         controller.helpers.flash_error.assert_called_once_with(expected_flash)
