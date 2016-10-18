@@ -25,7 +25,6 @@ import oauth2
 
 from functools import partial
 from ckan import plugins
-from ckan.common import session
 from ckan.plugins import toolkit
 from pylons import config
 from urlparse import urlparse
@@ -105,9 +104,6 @@ class OAuth2Plugin(plugins.SingletonPlugin):
 
     def identify(self):
         log.debug('identify')
-
-        # Create session if it does not exist. Workaround to show flash messages
-        session.save()
 
         def _refresh_and_save_token(user_name):
             new_token = self.oauth2helper.refresh_token(user_name)
