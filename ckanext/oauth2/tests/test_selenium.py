@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2014 CoNWeT Lab., Universidad Politécnica de Madrid
+# Copyright (c) 2014 - 2017 CoNWeT Lab., Universidad Politécnica de Madrid
 
 # This file is part of OAuth2 CKAN Extension.
 
@@ -115,13 +115,6 @@ class IntegrationTest(unittest.TestCase):
         self.assertEqual("filab2 Example User", driver.find_element_by_css_selector("span.username").text)
         self.assertEqual(self.base_url + "dataset", driver.current_url)
 
-    # def test_user_denies_ckan_access_to_their_account(self):
-    #     # User rejects the application to access his/her information
-    #     driver = self.driver
-    #     self._log_in(self.base_url, FILAB3_MAIL)
-    #     driver.find_element_by_name("cancel").click()
-    #     assert driver.find_element_by_xpath("//div/div/div/div").text.startswith("The end-user or authorization server denied the request.")
-
     def test_user_access_unauthorized_page(self):
         driver = self.driver
         self._log_in(self.base_url)
@@ -132,23 +125,6 @@ class IntegrationTest(unittest.TestCase):
         self.assertEquals(self.base_url, driver.current_url)
         # Check that an error message is shown
         assert driver.find_element_by_xpath("//div/div/div/div").text.startswith("Need to be system administrator to administer")
-
-    def test_user_access_unauthorized_page_not_logged(self):
-        driver = self.driver
-        driver.get(self.base_url + "ckan-admin")
-
-        # Check that the user has been redirected to the log in page
-        # self.assertEquals(IDM_URL + "/users/sign_in", driver.current_url)
-        assert driver.current_url.startswith(IDM_URL + "/oauth2/authorize")
-
-        # Log in the user
-        self._introduce_log_in_parameters()
-
-        if driver.current_url.startswith(IDM_URL):
-            driver.find_element_by_xpath("//button[@type='submit']").click()
-
-        # Check that the user is logged in now
-        self.assertEqual("filab2 Example User", driver.find_element_by_css_selector("span.username").text)
 
     def test_register_btn(self):
         driver = self.driver
@@ -165,6 +141,7 @@ class IntegrationTest(unittest.TestCase):
         driver.get(self.base_url + action)
         time.sleep(3)   # Wait the OAuth2 Server to return the page
         self.assertEqual(expected_url, driver.current_url)
+
 
 if __name__ == "__main__":
     unittest.main()
