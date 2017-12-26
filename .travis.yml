@@ -1,0 +1,24 @@
+sudo: required
+language: python
+python:
+    - "2.7"
+env:
+    - CKANVERSION=2.6.3 POSTGISVERSION=2
+    - CKANVERSION=2.7.2 POSTGISVERSION=2
+services:
+    - redis-server
+    - postgresql
+addons:
+    firefox: "46.0"
+install:
+    - bash bin/travis-build.bash
+before_script:
+  - "export DISPLAY=:99.0"
+  - "sh -e /etc/init.d/xvfb start"
+  - sleep 3 # give xvfb some time to start
+script:
+    - sh bin/travis-run.sh
+after_success: coveralls
+branches:
+  only:
+    - develop
