@@ -75,7 +75,7 @@ setup(
         'nose>=1.3.0'
     ],
     install_requires=[
-        'requests-oauthlib==0.5.0',
+        'requests-oauthlib==0.8.0',
     ],
     tests_require=[
         'nose_parameterized==0.3.3',
