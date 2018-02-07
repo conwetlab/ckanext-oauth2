@@ -134,8 +134,7 @@ class OAuth2PluginTest(unittest.TestCase):
             self.assertEquals(token[key], retrieved_token[key])
 
     @httpretty.activate
-    # TODO None is not a valid value, but it is treated as equivalent to an undefined variable
-    @patch.dict(os.environ, {'OAUTHLIB_INSECURE_TRANSPORT': None})
+    @patch.dict(os.environ, {'OAUTHLIB_INSECURE_TRANSPORT': ''})
     def test_get_token_insecure(self):
         oauth2.toolkit = MagicMock()
         helper = self._helper()
