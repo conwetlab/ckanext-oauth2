@@ -132,18 +132,36 @@ class OAuth2PluginTest(unittest.TestCase):
             self.assertIn(key, retrieved_token)
             self.assertEquals(token[key], retrieved_token[key])
 
-    # @httpretty.activate
-    # def test_get_token_insecure(self):
-    #     oauth2.toolkit = MagicMock()
-    #     helper = self._helper()
-    #     token = OAUTH2TOKEN
-    #     httpretty.register_uri(httpretty.POST, helper.token_endpoint, body=json.dumps(token))
+    @httpretty.activate
+    # TODO None is not a valid value, but it is treated as equivalent to an undefined variable
+    @mock.patch.dict(os.environ, {'OAUTHLIB_INSECURE_TRANSPORT': None})
+    def test_get_token_insecure(self):
+        oauth2.toolkit = MagicMock()
+        helper = self._helper()
+        token = OAUTH2TOKEN
+        httpretty.register_uri(httpretty.POST, helper.token_endpoint, body=json.dumps(token))
 
-    #     state = b64encode(json.dumps({'came_from': 'initial-page'}))
-    #     oauth2.toolkit.request = make_request(False, 'data.com', 'callback', {'state': state, 'code': 'code'})
+        state = b64encode(json.dumps({'came_from': 'initial-page'}))
+        oauth2.toolkit.request = make_request(False, 'data.com', 'callback', {'state': state, 'code': 'code'})
 
-    #     with self.assertRaises(InsecureTransportError):
-    #         helper.get_token()
+        with self.assertRaises(InsecureTransportError):
+            helper.get_token()
+
+    @httpretty.activate
+    @mock.patch.dict(os.environ, {'OAUTHLIB_INSECURE_TRANSPORT': 'True'})
+    def test_get_token(self):
+        oauth2.toolkit = MagicMock()
+        helper = self._helper()
+        token = OAUTH2TOKEN
+        httpretty.register_uri(httpretty.POST, helper.token_endpoint, body=json.dumps(token))
+
+        state = b64encode(json.dumps({'came_from': 'initial-page'}))
+        oauth2.toolkit.request = make_request(False, 'data.com', 'callback', {'state': state, 'code': 'code'})
+        retrieved_token = helper.get_token()
+
+        for key in token:
+            self.assertIn(key, retrieved_token)
+            self.assertEquals(token[key], retrieved_token[key])
 
     @httpretty.activate
     def test_get_token_error(self):
