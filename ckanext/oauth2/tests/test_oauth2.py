@@ -17,15 +17,16 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OAuth2 CKAN Extension.  If not, see <http://www.gnu.org/licenses/>.
 
-import unittest
 import json
+import os
+import unittest
 
 import httpretty
 import ckanext.oauth2.oauth2 as oauth2
 
 from base64 import b64encode
 from ckanext.oauth2.oauth2 import OAuth2Helper
-from mock import MagicMock
+from mock import patch, MagicMock
 from nose_parameterized import parameterized
 from oauthlib.oauth2 import InsecureTransportError, MissingCodeError, MissingTokenError
 from urllib import urlencode
@@ -134,7 +135,7 @@ class OAuth2PluginTest(unittest.TestCase):
 
     @httpretty.activate
     # TODO None is not a valid value, but it is treated as equivalent to an undefined variable
-    @mock.patch.dict(os.environ, {'OAUTHLIB_INSECURE_TRANSPORT': None})
+    @patch.dict(os.environ, {'OAUTHLIB_INSECURE_TRANSPORT': None})
     def test_get_token_insecure(self):
         oauth2.toolkit = MagicMock()
         helper = self._helper()
@@ -148,8 +149,8 @@ class OAuth2PluginTest(unittest.TestCase):
             helper.get_token()
 
     @httpretty.activate
-    @mock.patch.dict(os.environ, {'OAUTHLIB_INSECURE_TRANSPORT': 'True'})
-    def test_get_token(self):
+    @patch.dict(os.environ, {'OAUTHLIB_INSECURE_TRANSPORT': 'True'})
+    def test_get_token_insecure_enabled(self):
         oauth2.toolkit = MagicMock()
         helper = self._helper()
         token = OAUTH2TOKEN
