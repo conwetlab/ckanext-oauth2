@@ -17,19 +17,22 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OAuth2 CKAN Extension.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import unicode_literals
+
+from base64 import b64encode
 import json
 import os
 import unittest
+from urllib import urlencode
 
-import httpretty
 import ckanext.oauth2.oauth2 as oauth2
-
-from base64 import b64encode
 from ckanext.oauth2.oauth2 import OAuth2Helper
+import httpretty
 from mock import patch, MagicMock
 from nose_parameterized import parameterized
 from oauthlib.oauth2 import InsecureTransportError, MissingCodeError, MissingTokenError
-from urllib import urlencode
+from requests.exceptions import SSLError
+
 
 OAUTH2TOKEN = {
     'access_token': 'token',
@@ -146,6 +149,22 @@ class OAuth2PluginTest(unittest.TestCase):
 
         with self.assertRaises(InsecureTransportError):
             helper.get_token()
+
+    @httpretty.activate
+    @patch.dict(os.environ, {'OAUTHLIB_INSECURE_TRANSPORT': ''})
+    def test_get_token_invalid_cert(self):
+        oauth2.toolkit = MagicMock()
+        helper = self._helper()
+        token = OAUTH2TOKEN
+        httpretty.register_uri(httpretty.POST, helper.token_endpoint, body=json.dumps(token))
+
+        state = b64encode(json.dumps({'came_from': 'initial-page'}))
+        oauth2.toolkit.request = make_request(True, 'data.com', 'callback', {'state': state, 'code': 'code'})
+
+        with self.assertRaises(InsecureTransportError):
+            with patch('ckanext.oauth2.oauth2.OAuth2Session') as oauth2_session_mock:
+                oauth2_session_mock().fetch_token.side_effect = SSLError('(Caused by SSLError(SSLError("bad handshake: Error([(\'SSL routines\', \'tls_process_server_certificate\', \'certificate verify failed\')],)",),)')
+                helper.get_token()
 
     @httpretty.activate
     @patch.dict(os.environ, {'OAUTHLIB_INSECURE_TRANSPORT': 'True'})

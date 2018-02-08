@@ -26,11 +26,15 @@ import constants
 import db
 import json
 import logging
+import os
 
 from base64 import b64encode, b64decode
 from ckan.plugins import toolkit
+from oauthlib.oauth2 import InsecureTransportError
 from pylons import config
+import requests
 from requests_oauthlib import OAuth2Session
+import six
 
 log = logging.getLogger(__name__)
 
@@ -46,6 +50,8 @@ def get_came_from(state):
 class OAuth2Helper(object):
 
     def __init__(self):
+
+        self.verify_https = os.environ.get('OAUTHLIB_INSECURE_TRANSPORT', '') == ""
 
         self.authorization_endpoint = config.get('ckan.oauth2.authorization_endpoint', None)
         self.token_endpoint = config.get('ckan.oauth2.token_endpoint', None)
@@ -89,15 +95,31 @@ class OAuth2Helper(object):
                 '%s:%s' % (self.client_id, self.client_secret)
             )
         }
-        token = oauth.fetch_token(self.token_endpoint,
-                                  headers=headers,
-                                  client_secret=self.client_secret,
-                                  authorization_response=toolkit.request.url)
+        try:
+            token = oauth.fetch_token(self.token_endpoint,
+                                      headers=headers,
+                                      client_secret=self.client_secret,
+                                      authorization_response=toolkit.request.url,
+                                      verify=self.verify_https)
+        except requests.exceptions.SSLError as e:
+            # TODO search a better way to detect invalid certificates
+            if "verify failed" in six.text_type(e):
+                raise InsecureTransportError()
+            else:
+                raise
+
         return token
 
     def identify(self, token):
         oauth = OAuth2Session(self.client_id, token=token)
-        profile_response = oauth.get(self.profile_api_url + '?access_token=%s' % token['access_token'])
+        try:
+            profile_response = oauth.get(self.profile_api_url + '?access_token=%s' % token['access_token'], verify=self.verify_https)
+        except requests.exceptions.SSLError as e:
+            # TODO search a better way to detect invalid certificates
+            if "verify failed" in six.text_type(e):
+                raise InsecureTransportError()
+            else:
+                raise
 
         # Token can be invalid
         if not profile_response.ok:
@@ -187,7 +209,14 @@ class OAuth2Helper(object):
         token = self.get_stored_token(user_name)
         if token:
             client = OAuth2Session(self.client_id, token=token, scope=self.scope)
-            token = client.refresh_token(self.token_endpoint, client_secret=self.client_secret, client_id=self.client_id)
+            try:
+                token = client.refresh_token(self.token_endpoint, client_secret=self.client_secret, client_id=self.client_id, verify=self.verify_https)
+            except requests.exceptions.SSLError as e:
+                # TODO search a better way to detect invalid certificates
+                if "verify failed" in six.text_type(e):
+                    raise InsecureTransportError()
+                else:
+                    raise
             self.update_token(user_name, token)
             log.info('Token for user %s has been updated properly' % user_name)
             return token
