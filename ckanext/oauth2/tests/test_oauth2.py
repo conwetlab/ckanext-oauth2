@@ -439,6 +439,7 @@ class OAuth2PluginTest(unittest.TestCase):
         (True,),
         (False,)
     ])
+    @patch.dict(os.environ, {'OAUTHLIB_INSECURE_TRANSPORT': ''})
     def test_refresh_token(self, user_exists):
         username = 'user'
         helper = self.helper = self._helper()
@@ -475,7 +476,7 @@ class OAuth2PluginTest(unittest.TestCase):
             self.assertEquals(newtoken, result)
             helper.get_stored_token.assert_called_once_with(username)
             oauth2.OAuth2Session.assert_called_once_with(helper.client_id, token=current_token, scope=helper.scope)
-            session.refresh_token.assert_called_once_with(helper.token_endpoint, client_secret=helper.client_secret, client_id=helper.client_id)
+            session.refresh_token.assert_called_once_with(helper.token_endpoint, client_secret=helper.client_secret, client_id=helper.client_id, verify=True)
             helper.update_token.assert_called_once_with(username, newtoken)
         else:
             self.assertIsNone(result)
