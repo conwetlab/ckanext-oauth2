@@ -98,16 +98,14 @@ class OAuth2PluginTest(unittest.TestCase):
             'ckan.oauth2.client_id': 'client-id',
             'ckan.oauth2.client_secret': 'client-secret',
             'ckan.oauth2.profile_api_url': self._profile_api_url,
-            'ckan.oauth2.profile_api_user_field': self._user_field
+            'ckan.oauth2.profile_api_user_field': self._user_field,
+            'ckan.oauth2.profile_api_mail_field': self._email_field,
         }
 
         helper = OAuth2Helper()
 
         if fullname_field:
             helper.profile_api_fullname_field = self._fullname_field
-
-        if mail_field:
-            helper.profile_api_mail_field = self._email_field
 
         return helper
 
@@ -271,23 +269,21 @@ class OAuth2PluginTest(unittest.TestCase):
     ])
     @httpretty.activate
     def test_identify(self, username, fullname=None, email=None, user_exists=True,
-                      fullname_field=True, email_field=True):
+                      fullname_field=True):
 
-        self.helper = helper = self._helper(fullname_field, email_field)
+        self.helper = helper = self._helper(fullname_field)
 
         # Simulate the HTTP Request
         user_info = {}
         user_info[self._user_field] = username
+        user_info[self._email_field] = email
 
         if fullname:
             user_info[self._fullname_field] = fullname
 
-        if email:
-            user_info[self._email_field] = email
-
         httpretty.register_uri(httpretty.GET, self._profile_api_url, body=json.dumps(user_info))
 
-        print username, fullname, email, user_exists, fullname_field, email_field
+        print username, fullname, email, user_exists, fullname_field
 
         # Create the mocks
         request = MagicMock()
@@ -319,16 +315,12 @@ class OAuth2PluginTest(unittest.TestCase):
 
         # Check that user properties are set properly
         self.assertEquals(username, user.name)
+        self.assertEquals(email, user.email)
 
         if fullname and fullname_field:
             self.assertEquals(fullname, user.fullname)
         else:
             self.assertEquals(None, user.fullname)
-
-        if email and email_field:
-            self.assertEquals(email, user.email)
-        else:
-            self.assertEquals(None, user.email)
 
         # Check that the user is saved
         oauth2.model.Session.add.assert_called_once_with(user)
