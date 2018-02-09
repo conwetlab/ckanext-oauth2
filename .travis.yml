@@ -21,4 +21,4 @@ script:
 after_success: coveralls
 branches:
   only:
-    - fiware_migration
+    - master
