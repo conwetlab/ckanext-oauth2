@@ -20,16 +20,21 @@
 
 from __future__ import unicode_literals
 
+import base64
 import ckan.model as model
 import constants
 import db
 import json
 import logging
+import os
 
 from base64 import b64encode, b64decode
 from ckan.plugins import toolkit
+from oauthlib.oauth2 import InsecureTransportError
 from pylons import config
+import requests
 from requests_oauthlib import OAuth2Session
+import six
 
 log = logging.getLogger(__name__)
 
@@ -45,6 +50,8 @@ def get_came_from(state):
 class OAuth2Helper(object):
 
     def __init__(self):
+
+        self.verify_https = os.environ.get('OAUTHLIB_INSECURE_TRANSPORT', '') == ""
 
         self.authorization_endpoint = config.get('ckan.oauth2.authorization_endpoint', None)
         self.token_endpoint = config.get('ckan.oauth2.token_endpoint', None)
@@ -64,9 +71,9 @@ class OAuth2Helper(object):
         db.init_db(model)
 
         if not self.authorization_endpoint or not self.token_endpoint or not self.client_id or not self.client_secret \
-                or not self.profile_api_url or not self.profile_api_user_field:
+                or not self.profile_api_url or not self.profile_api_user_field or not self.profile_api_mail_field:
             raise ValueError('authorization_endpoint, token_endpoint, client_id, client_secret, '
-                             'profile_api_url and profile_api_user_field are required')
+                             'profile_api_url, profile_api_user_field and profile_api_mail_field are required')
 
     def _redirect_uri(self, request):
         return ''.join([request.host_url, constants.REDIRECT_URL])
@@ -82,14 +89,40 @@ class OAuth2Helper(object):
 
     def get_token(self):
         oauth = OAuth2Session(self.client_id, redirect_uri=self._redirect_uri(toolkit.request), scope=self.scope)
-        token = oauth.fetch_token(self.token_endpoint,
-                                  client_secret=self.client_secret,
-                                  authorization_response=toolkit.request.url)
+
+        # Just because of FIWARE Authentication
+        headers = {
+            'Accept': 'application/json',
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': 'Basic %s' % base64.urlsafe_b64encode(
+                '%s:%s' % (self.client_id, self.client_secret)
+            )
+        }
+        try:
+            token = oauth.fetch_token(self.token_endpoint,
+                                      headers=headers,
+                                      client_secret=self.client_secret,
+                                      authorization_response=toolkit.request.url,
+                                      verify=self.verify_https)
+        except requests.exceptions.SSLError as e:
+            # TODO search a better way to detect invalid certificates
+            if "verify failed" in six.text_type(e):
+                raise InsecureTransportError()
+            else:
+                raise
+
         return token
 
     def identify(self, token):
         oauth = OAuth2Session(self.client_id, token=token)
-        profile_response = oauth.get(self.profile_api_url)
+        try:
+            profile_response = oauth.get(self.profile_api_url + '?access_token=%s' % token['access_token'], verify=self.verify_https)
+        except requests.exceptions.SSLError as e:
+            # TODO search a better way to detect invalid certificates
+            if "verify failed" in six.text_type(e):
+                raise InsecureTransportError()
+            else:
+                raise
 
         # Token can be invalid
         if not profile_response.ok:
@@ -100,22 +133,29 @@ class OAuth2Helper(object):
                 profile_response.raise_for_status()
         else:
             user_data = profile_response.json()
+            email = user_data[self.profile_api_mail_field]
             user_name = user_data[self.profile_api_user_field]
-            user = model.User.by_name(user_name)
 
+            # In CKAN can exists more than one user associated with the same email
+            # Some providers, like Google and FIWARE only allows one account per email
+            user = None
+            users = model.User.by_email(email)
+            if len(users) == 1:
+                user = users[0]
+
+            # If the user does not exist, we have to create it...
             if user is None:
-                # If the user does not exist, it's created
-                user = model.User(name=user_name)
+                user = model.User(email=email)
+
+            # Now we update his/her user_name with the one provided by the OAuth2 service
+            # In the future, users will be obtained based on this field
+            user.name = user_name
 
             # Update fullname
             if self.profile_api_fullname_field and self.profile_api_fullname_field in user_data:
                 user.fullname = user_data[self.profile_api_fullname_field]
 
-            # Update mail
-            if self.profile_api_mail_field and self.profile_api_mail_field in user_data:
-                user.email = user_data[self.profile_api_mail_field]
-
-             # Update sysadmin status
+            # Update sysadmin status
             if self.profile_api_groupmembership_field and self.profile_api_groupmembership_field in user_data:
                 if self.sysadmin_group_name and self.sysadmin_group_name in user_data[self.profile_api_groupmembership_field]:
                     user.sysadmin = True
@@ -173,7 +213,7 @@ class OAuth2Helper(object):
         # Save the new token
         user_token.access_token = token['access_token']
         user_token.token_type = token['token_type']
-        user_token.refresh_token = token['refresh_token']
+        user_token.refresh_token = token.get('refresh_token')
         user_token.expires_in = token['expires_in']
         model.Session.add(user_token)
         model.Session.commit()
@@ -182,7 +222,14 @@ class OAuth2Helper(object):
         token = self.get_stored_token(user_name)
         if token:
             client = OAuth2Session(self.client_id, token=token, scope=self.scope)
-            token = client.refresh_token(self.token_endpoint, client_secret=self.client_secret, client_id=self.client_id)
+            try:
+                token = client.refresh_token(self.token_endpoint, client_secret=self.client_secret, client_id=self.client_id, verify=self.verify_https)
+            except requests.exceptions.SSLError as e:
+                # TODO search a better way to detect invalid certificates
+                if "verify failed" in six.text_type(e):
+                    raise InsecureTransportError()
+                else:
+                    raise
             self.update_token(user_name, token)
             log.info('Token for user %s has been updated properly' % user_name)
             return token
