@@ -68,9 +68,9 @@ class OAuth2Helper(object):
         db.init_db(model)
 
         if not self.authorization_endpoint or not self.token_endpoint or not self.client_id or not self.client_secret \
-                or not self.profile_api_url or not self.profile_api_user_field:
+                or not self.profile_api_url or not self.profile_api_user_field or not self.profile_api_mail_field:
             raise ValueError('authorization_endpoint, token_endpoint, client_id, client_secret, '
-                             'profile_api_url and profile_api_user_field are required')
+                             'profile_api_url, profile_api_user_field and profile_api_mail_field are required')
 
     def _redirect_uri(self, request):
         return ''.join([request.host_url, constants.REDIRECT_URL])
@@ -130,11 +130,14 @@ class OAuth2Helper(object):
                 profile_response.raise_for_status()
         else:
             user_data = profile_response.json()
-            email = user_data[self.profile_api_mail_field]          # WARN: profile_api_mail_field should be defined!!
-            user_name = user_data[self.profile_api_user_field]      # WARN: profile_api_user_field should be defined!!
+            email = user_data[self.profile_api_mail_field]
+            user_name = user_data[self.profile_api_user_field]
+
+            # In CKAN can exists more than one user associated with the same email
+            # Some providers, like Google and FIWARE only allows one account per email
             user = None
-            users = model.User.by_email(email)  # It returns a list of users (since it can exist some users with the same email...)
-            if len(users) == 1:                 # In the Fi-Ware case this problem does not exist since all the users have different mails...
+            users = model.User.by_email(email)
+            if len(users) == 1:
                 user = users[0]
 
             # If the user does not exist, we have to create it...
