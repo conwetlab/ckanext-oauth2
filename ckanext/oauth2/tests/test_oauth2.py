@@ -255,17 +255,12 @@ class OAuth2PluginTest(unittest.TestCase):
         # ('test_user', 'Test User Full Name', None),
         ('test_user', 'Test User Full Name', 'test@test.com', False),
         ('test_user', None, 'test@test.com', False),
-        # ('test_user', 'Test User Full Name', None, False),
-        ('test_user', 'Test User Full Name', 'test@test.com', True, True, True),
-        ('test_user', None, 'test@test.com', True, True, True),
-        # ('test_user', 'Test User Full Name', None, True, True, True),
-        ('test_user', 'Test User Full Name', 'test@test.com', True, True, True),
-        ('test_user', 'Test User Full Name', 'test@test.com', True, False, True),
-        ('test_user', None, 'test@test.com', True, False, True),
-        # ('test_user', 'Test User Full Name', 'test@test.com', True, True, False),
-        # ('test_user', 'Test User Full Name', None, True, True, False),
-        # ('test_user', 'Test User Full Name', 'test@test.com', True, False, False),
-        # ('test_user', None, None, True, False, False)
+        ('test_user', 'Test User Full Name', 'test@test.com', True, True),
+        ('test_user', None, 'test@test.com', True, True),
+        # ('test_user', 'Test User Full Name', None, True, True),
+        ('test_user', 'Test User Full Name', 'test@test.com', True, True),
+        ('test_user', 'Test User Full Name', 'test@test.com', True, False),
+        ('test_user', None, 'test@test.com', True, False),
     ])
     @httpretty.activate
     def test_identify(self, username, fullname=None, email=None, user_exists=True,
