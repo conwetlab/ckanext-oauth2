@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2014 CoNWeT Lab., Universidad Politécnica de Madrid
+# Copyright (c) 2014-2018 CoNWeT Lab., Universidad Politécnica de Madrid
 
 # This file is part of OAuth2 CKAN Extension.
 
@@ -17,5 +17,5 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OAuth2 CKAN Extension.  If not, see <http://www.gnu.org/licenses/>.
 
-__version__ = '0.3.8'
+__version__ = '0.4.0'
 __description__ = 'OAuth2 support for CKAN'
