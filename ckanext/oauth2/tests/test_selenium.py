@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2014 - 2017 CoNWeT Lab., Universidad Politécnica de Madrid
+# Copyright (c) 2018 Future Internet Consulting and Development Solutions S.L.
 
 # This file is part of OAuth2 CKAN Extension.
 
@@ -41,13 +42,8 @@ class IntegrationTest(unittest.TestCase):
         env['OAUTHLIB_INSECURE_TRANSPORT'] = 'True'
         cls._process = Popen(['paster', 'serve', 'test-fiware.ini'], env=env)
 
-        if 'WEB_DRIVER_URL' in os.environ and 'CKAN_SERVER_URL' in os.environ:
-            cls.driver = webdriver.Remote(os.environ['WEB_DRIVER_URL'], webdriver.DesiredCapabilities.FIREFOX.copy())
-            cls.base_url = os.environ['CKAN_SERVER_URL']
-        else:
-            cls.driver = webdriver.Firefox()
-            cls.base_url = 'http://localhost:5000/'
-
+        cls.driver = webdriver.Firefox()
+        cls.base_url = 'http://localhost:5000/'
         cls.driver.implicitly_wait(5)
         cls.driver.set_window_size(1024, 768)
 

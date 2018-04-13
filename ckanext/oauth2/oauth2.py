@@ -67,7 +67,7 @@ class OAuth2Helper(object):
         self.profile_api_mail_field = config.get('ckan.oauth2.profile_api_mail_field', None)
         self.profile_api_groupmembership_field = config.get('ckan.oauth2.profile_api_groupmembership_field', None)
         self.sysadmin_group_name = config.get('ckan.oauth2.sysadmin_group_name', None)
-        self.redirect_uri = urljoin(urljoin(config.get('ckan.site_url', 'http://localhost'), config.get('ckan.root_path')), constants.REDIRECT_URL)
+        self.redirect_uri = urljoin(urljoin(config.get('ckan.site_url', 'http://localhost:5000'), config.get('ckan.root_path')), constants.REDIRECT_URL)
 
         # Init db
         db.init_db(model)
