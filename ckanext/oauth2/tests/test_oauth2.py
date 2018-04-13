@@ -353,8 +353,8 @@ class OAuth2PluginTest(unittest.TestCase):
         token = {'access_token': 'OAUTH_TOKEN'}
 
         with self.assertRaises(InsecureTransportError):
-            with patch('ckanext.oauth2.oauth2.requests') as requests_mock:
-                requests_mock.get.side_effect = SSLError('(Caused by SSLError(SSLError("bad handshake: Error([(\'SSL routines\', \'tls_process_server_certificate\', \'certificate verify failed\')],)",),)')
+            with patch('ckanext.oauth2.oauth2.requests.get') as requests_get_mock:
+                requests_get_mock.side_effect = SSLError('(Caused by SSLError(SSLError("bad handshake: Error([(\'SSL routines\', \'tls_process_server_certificate\', \'certificate verify failed\')],)",),)')
                 helper.identify(token)
 
     def test_get_stored_token_non_existing_user(self):
