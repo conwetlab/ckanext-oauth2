@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2014 CoNWeT Lab., Universidad Politécnica de Madrid
+# Copyright (c) 2018 Future Internet Consulting and Development Solutions S.L.
 
 # This file is part of OAuth2 CKAN Extension.
 
@@ -245,7 +246,7 @@ class OAuth2PluginTest(unittest.TestCase):
         # Check
         state = urlencode({'state': b64encode(bytes(json.dumps({'came_from': came_from})))})
         expected_url = 'https://test/oauth2/authorize/?response_type=code&client_id=client-id&' + \
-                       'redirect_uri=http%3A%2F%2Flocalhost%2Foauth2%2Fcallback&' + state
+                       'redirect_uri=http%3A%2F%2Flocalhost%3A5000%2Foauth2%2Fcallback&' + state
         self.assertEquals(302, oauth2.toolkit.response.status)
         self.assertEquals(expected_url, oauth2.toolkit.response.location)
 
