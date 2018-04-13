@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OAuth2 CKAN Extension.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
+from __future__ import print_function, unicode_literals
 
 from base64 import b64encode
 import json
@@ -82,13 +82,6 @@ class OAuth2PluginTest(unittest.TestCase):
         oauth2.model.Session = self._Session
         oauth2.db = self._db
         oauth2.OAuth2Session = self._OAuth2Session
-
-        # Recover the function since it'll be mocked in a test...
-        if getattr(self, 'plugin', None) is not None and getattr(self, '_update_token', None) is not None:
-            self.plugin.update_token = self._update_token
-
-        if getattr(self, 'plugin', None) is not None and getattr(self, '_get_token', None) is not None:
-            self.plugin.get_token = self._get_token
 
     def _helper(self, fullname_field=True, mail_field=True):
         oauth2.db = MagicMock()
@@ -279,7 +272,7 @@ class OAuth2PluginTest(unittest.TestCase):
 
         httpretty.register_uri(httpretty.GET, self._profile_api_url, body=json.dumps(user_info))
 
-        print username, fullname, email, user_exists, fullname_field
+        print(username, fullname, email, user_exists, fullname_field)
 
         # Create the mocks
         request = MagicMock()
@@ -448,10 +441,6 @@ class OAuth2PluginTest(unittest.TestCase):
             current_token = OAUTH2TOKEN
         else:
             current_token = None
-
-        # save functions that will be mocked (they'll be recovered in tearDown)
-        self._get_token = self.helper.get_token
-        self._update_token = self.helper.update_token
 
         # mock plugin functions
         helper.get_stored_token = MagicMock(return_value=current_token)

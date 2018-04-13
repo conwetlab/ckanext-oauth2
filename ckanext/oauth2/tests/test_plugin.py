@@ -37,7 +37,6 @@ class PluginTest(unittest.TestCase):
         self._toolkit = plugin.toolkit
         plugin.toolkit = MagicMock()
 
-
         self._oauth2 = plugin.oauth2
         plugin.oauth2 = MagicMock()
 
