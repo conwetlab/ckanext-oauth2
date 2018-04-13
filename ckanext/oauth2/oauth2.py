@@ -27,6 +27,7 @@ import constants
 import db
 import json
 import logging
+from six.moves.urllib.parse import urljoin
 import os
 
 from base64 import b64encode, b64decode
@@ -66,7 +67,7 @@ class OAuth2Helper(object):
         self.profile_api_mail_field = config.get('ckan.oauth2.profile_api_mail_field', None)
         self.profile_api_groupmembership_field = config.get('ckan.oauth2.profile_api_groupmembership_field', None)
         self.sysadmin_group_name = config.get('ckan.oauth2.sysadmin_group_name', None)
-
+        self.redirect_uri = urljoin(urljoin(config.get('ckan.site_url'), config.get('root_path')), constants.REDIRECT_URL)
 
         # Init db
         db.init_db(model)
@@ -76,20 +77,17 @@ class OAuth2Helper(object):
             raise ValueError('authorization_endpoint, token_endpoint, client_id, client_secret, '
                              'profile_api_url, profile_api_user_field and profile_api_mail_field are required')
 
-    def _redirect_uri(self, request):
-        return ''.join([request.host_url, constants.REDIRECT_URL])
-
     def challenge(self, came_from_url):
         # This function is called by the log in function when the user is not logged in
         state = generate_state(came_from_url)
-        oauth = OAuth2Session(self.client_id, redirect_uri=self._redirect_uri(toolkit.request), scope=self.scope, state=state)
+        oauth = OAuth2Session(self.client_id, redirect_uri=self.redirect_uri, scope=self.scope, state=state)
         auth_url, _ = oauth.authorization_url(self.authorization_endpoint)
         toolkit.response.status = 302
         toolkit.response.location = auth_url
         log.debug('Challenge: Redirecting challenge to page {0}'.format(auth_url))
 
     def get_token(self):
-        oauth = OAuth2Session(self.client_id, redirect_uri=self._redirect_uri(toolkit.request), scope=self.scope)
+        oauth = OAuth2Session(self.client_id, redirect_uri=self.redirect_uri, scope=self.scope)
 
         # Just because of FIWARE Authentication
         headers = {
