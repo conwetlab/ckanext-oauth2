@@ -346,6 +346,17 @@ class OAuth2PluginTest(unittest.TestCase):
 
         self.assertTrue(exception_risen)
 
+    @patch.dict(os.environ, {'OAUTHLIB_INSECURE_TRANSPORT': ''})
+    def test_identify_invalid_cert(self):
+
+        helper = self._helper()
+        token = {'access_token': 'OAUTH_TOKEN'}
+
+        with self.assertRaises(InsecureTransportError):
+            with patch('ckanext.oauth2.oauth2.requests') as requests_mock:
+                requests_mock.get.side_effect = SSLError('(Caused by SSLError(SSLError("bad handshake: Error([(\'SSL routines\', \'tls_process_server_certificate\', \'certificate verify failed\')],)",),)')
+                helper.identify(token)
+
     def test_get_stored_token_non_existing_user(self):
         helper = self._helper()
         oauth2.db.UserToken.by_user_name = MagicMock(return_value=None)
@@ -471,3 +482,16 @@ class OAuth2PluginTest(unittest.TestCase):
             self.assertEquals(0, oauth2.OAuth2Session.call_count)
             self.assertEquals(0, session.refresh_token.call_count)
             self.assertEquals(0, helper.update_token.call_count)
+
+    @patch.dict(os.environ, {'OAUTHLIB_INSECURE_TRANSPORT': ''})
+    def test_refresh_token_invalid_cert(self):
+        username = 'user'
+        helper = self._helper()
+
+        # mock plugin functions
+        helper.get_stored_token = MagicMock(return_value=current_token)
+
+        with self.assertRaises(InsecureTransportError):
+            with patch('ckanext.oauth2.oauth2.OAuth2Session') as oauth2_session_mock:
+                oauth2_session_mock().refresh_token.side_effect = SSLError('(Caused by SSLError(SSLError("bad handshake: Error([(\'SSL routines\', \'tls_process_server_certificate\', \'certificate verify failed\')],)",),)')
+                helper.refresh_token(username)
