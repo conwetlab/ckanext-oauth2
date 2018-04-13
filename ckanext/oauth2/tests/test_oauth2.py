@@ -486,6 +486,7 @@ class OAuth2PluginTest(unittest.TestCase):
     @patch.dict(os.environ, {'OAUTHLIB_INSECURE_TRANSPORT': ''})
     def test_refresh_token_invalid_cert(self):
         username = 'user'
+        current_token = OAUTH2TOKEN
         helper = self._helper()
 
         # mock plugin functions
