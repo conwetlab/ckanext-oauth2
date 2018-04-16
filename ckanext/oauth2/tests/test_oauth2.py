@@ -83,10 +83,11 @@ class OAuth2PluginTest(unittest.TestCase):
         oauth2.db = self._db
         oauth2.OAuth2Session = self._OAuth2Session
 
-    def _helper(self, fullname_field=True, mail_field=True):
+    def _helper(self, fullname_field=True, mail_field=True, conf=None):
         oauth2.db = MagicMock()
 
         oauth2.config = {
+            'ckan.oauth2.legacy_idm': 'false',
             'ckan.oauth2.authorization_endpoint': 'https://test/oauth2/authorize/',
             'ckan.oauth2.token_endpoint': 'https://test/oauth2/token/',
             'ckan.oauth2.client_id': 'client-id',
@@ -95,6 +96,8 @@ class OAuth2PluginTest(unittest.TestCase):
             'ckan.oauth2.profile_api_user_field': self._user_field,
             'ckan.oauth2.profile_api_mail_field': self._email_field,
         }
+        if conf is not None:
+            oauth2.config.update(conf)
 
         helper = OAuth2Helper()
 
@@ -343,6 +346,17 @@ class OAuth2PluginTest(unittest.TestCase):
     def test_identify_invalid_cert(self):
 
         helper = self._helper()
+        token = {'access_token': 'OAUTH_TOKEN'}
+
+        with self.assertRaises(InsecureTransportError):
+            with patch('ckanext.oauth2.oauth2.OAuth2Session') as oauth2_session_mock:
+                oauth2_session_mock().fetch_token.side_effect = SSLError('(Caused by SSLError(SSLError("bad handshake: Error([(\'SSL routines\', \'tls_process_server_certificate\', \'certificate verify failed\')],)",),)')
+                helper.identify(token)
+
+    @patch.dict(os.environ, {'OAUTHLIB_INSECURE_TRANSPORT': ''})
+    def test_identify_invalid_cert_legacy(self):
+
+        helper = self._helper(conf={"ckan.oauth2.legacy_idm": "True"})
         token = {'access_token': 'OAUTH_TOKEN'}
 
         with self.assertRaises(InsecureTransportError):
