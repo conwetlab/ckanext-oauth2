@@ -55,7 +55,7 @@ class OAuth2Helper(object):
 
         self.verify_https = os.environ.get('OAUTHLIB_INSECURE_TRANSPORT', '') == ""
 
-        self.legacy_idm = six.text_type(config.get('ckan.oauth2.legacy_idm', '')).strip().lower() == "false"
+        self.legacy_idm = six.text_type(config.get('ckan.oauth2.legacy_idm', '')).strip().lower() == "true"
         self.authorization_endpoint = config.get('ckan.oauth2.authorization_endpoint', None)
         self.token_endpoint = config.get('ckan.oauth2.token_endpoint', None)
         self.profile_api_url = config.get('ckan.oauth2.profile_api_url', None)
