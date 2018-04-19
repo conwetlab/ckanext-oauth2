@@ -350,7 +350,7 @@ class OAuth2PluginTest(unittest.TestCase):
 
         with self.assertRaises(InsecureTransportError):
             with patch('ckanext.oauth2.oauth2.OAuth2Session') as oauth2_session_mock:
-                oauth2_session_mock().fetch_token.side_effect = SSLError('(Caused by SSLError(SSLError("bad handshake: Error([(\'SSL routines\', \'tls_process_server_certificate\', \'certificate verify failed\')],)",),)')
+                oauth2_session_mock().get.side_effect = SSLError('(Caused by SSLError(SSLError("bad handshake: Error([(\'SSL routines\', \'tls_process_server_certificate\', \'certificate verify failed\')],)",),)')
                 helper.identify(token)
 
     @patch.dict(os.environ, {'OAUTHLIB_INSECURE_TRANSPORT': ''})
