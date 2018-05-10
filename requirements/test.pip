@@ -1,5 +1,5 @@
 parameterized
-selenium==2.53.0
+selenium==3.5.0
 httpretty>=0.6.5
 mock
 sure
