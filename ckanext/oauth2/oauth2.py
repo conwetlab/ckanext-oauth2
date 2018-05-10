@@ -113,7 +113,7 @@ class OAuth2Helper(object):
     def identify(self, token):
         oauth = OAuth2Session(self.client_id, token=token)
         try:
-            profile_response = oauth.get(self.profile_api_url + '?access_token=%s' % token['access_token'], verify=self.verify_https)
+            profile_response = requests.get(self.profile_api_url + '?access_token=%s' % token['access_token'], verify=self.verify_https)
         except requests.exceptions.SSLError as e:
             # TODO search a better way to detect invalid certificates
             if "verify failed" in six.text_type(e):
