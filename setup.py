@@ -78,8 +78,8 @@ setup(
         'requests-oauthlib==0.8.0',
     ],
     tests_require=[
-        'nose_parameterized==0.3.3',
-        'selenium==2.53.0'
+        'parameterized',
+        'selenium==3.5.0'
     ],
     test_suite='nosetests',
     entry_points={

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2014 CoNWeT Lab., Universidad Politécnica de Madrid
+# Copyright (c) 2018 Future Internet Consulting and Development Solutions S.L.
 
 # This file is part of OAuth2 CKAN Extension.
 
@@ -23,7 +24,7 @@ import json
 
 from base64 import b64decode, b64encode
 from mock import MagicMock
-from nose_parameterized import parameterized
+from parameterized import parameterized
 
 RETURNED_STATUS = 302
 EXAMPLE_FLASH = 'This is a test'

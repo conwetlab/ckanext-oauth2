@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2014 CoNWeT Lab., Universidad Politécnica de Madrid
+# Copyright (c) 2018 Future Internet Consulting and Development Solutions S.L.
 
 # This file is part of OAuth2 CKAN Extension.
 
@@ -21,7 +22,7 @@ import unittest
 import ckanext.oauth2.plugin as plugin
 
 from mock import MagicMock
-from nose_parameterized import parameterized
+from parameterized import parameterized
 
 AUTHORIZATION_HEADER = 'Custom_Header'
 HOST = 'data.lab.fiware.org'

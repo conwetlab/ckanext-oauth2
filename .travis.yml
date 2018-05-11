@@ -5,20 +5,22 @@ python:
 env:
     - CKANVERSION=2.6.3 POSTGISVERSION=2
     - CKANVERSION=2.7.2 POSTGISVERSION=2
-    - CKANVERSION=2.7.3 POSTGISVERSION=2
+    - CKANVERSION=2.7.3 POSTGISVERSION=2 INTEGRATION_TEST=true
+    - CKANVERSION=2.8.0 POSTGISVERSION=2
 services:
     - redis-server
     - postgresql
 addons:
-    firefox: "46.0"
+    firefox: "60.0esr"
+before_install:
+    - wget https://github.com/mozilla/geckodriver/releases/download/v0.20.1/geckodriver-v0.20.1-linux64.tar.gz
+    - mkdir geckodriver
+    - tar -xzf geckodriver-v0.20.1-linux64.tar.gz -C geckodriver
+    - export PATH=$PATH:$PWD/geckodriver
 install:
     - bash bin/travis-build.bash
-before_script:
-  - "export DISPLAY=:99.0"
-  - "sh -e /etc/init.d/xvfb start"
-  - sleep 3 # give xvfb some time to start
 script:
-    - sh bin/travis-run.sh
+    - bash bin/travis-run.sh
 after_success: coveralls
 branches:
   only:
