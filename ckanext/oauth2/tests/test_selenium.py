@@ -31,13 +31,17 @@ IDM_URL = "https://account.lab.fiware.org"
 FILAB2_MAIL = "filab2@mailinator.com"
 FILAB3_MAIL = "filab3@mailinator.com"
 FILAB_PASSWORD = "filab1234"
+PASS_INTEGRATION_TESTS = os.environ.get("INTEGRATION_TEST", "").strip().lower() in ('1', 'true', 'on')
 
-
-@unittest.skipUnless(os.environ.get("INTEGRATION_TEST", "").strip().lower() in ('1', 'true', 'on'), "set INTEGRATION_TEST environment variable (e.g. INTEGRATION_TEST=true) for running the integration tests")
+@unittest.skipUnless(PASS_INTEGRATION_TESTS, "set INTEGRATION_TEST environment variable (e.g. INTEGRATION_TEST=true) for running the integration tests")
 class IntegrationTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        # nose calls this method also if they are going to be skiped
+        if not PASS_INTEGRATION_TESTS:
+            return
+
         env = os.environ.copy()
         env['DEBUG'] = 'True'
         env['OAUTHLIB_INSECURE_TRANSPORT'] = 'True'
@@ -57,6 +61,10 @@ class IntegrationTest(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        # nose calls this method also if they are going to be skiped
+        if not PASS_INTEGRATION_TESTS:
+            return
+
         cls._process.terminate()
         cls.driver.quit()
 
