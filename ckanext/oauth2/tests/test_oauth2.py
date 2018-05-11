@@ -30,7 +30,7 @@ import ckanext.oauth2.oauth2 as oauth2
 from ckanext.oauth2.oauth2 import OAuth2Helper
 import httpretty
 from mock import patch, MagicMock
-from nose_parameterized import parameterized
+from parameterized import parameterized
 from oauthlib.oauth2 import InsecureTransportError, MissingCodeError, MissingTokenError
 from requests.exceptions import SSLError
 

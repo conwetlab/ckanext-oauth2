@@ -78,7 +78,7 @@ setup(
         'requests-oauthlib==0.8.0',
     ],
     tests_require=[
-        'nose_parameterized==0.3.3',
+        'parameterized',
         'selenium==2.53.0'
     ],
     test_suite='nosetests',

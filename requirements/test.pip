@@ -1,4 +1,4 @@
-nose_parameterized==0.3.3
+parameterized
 selenium==2.53.0
 httpretty>=0.6.5
 mock

@@ -23,7 +23,7 @@ import os
 import time
 
 from urlparse import urljoin
-from nose_parameterized import parameterized
+from parameterized import parameterized
 from selenium import webdriver
 from subprocess import Popen
 
