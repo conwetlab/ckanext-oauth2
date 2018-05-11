@@ -33,6 +33,7 @@ FILAB3_MAIL = "filab3@mailinator.com"
 FILAB_PASSWORD = "filab1234"
 
 
+@unittest.skipUnless(os.environ.get("INTEGRATION_TEST", "").strip().lower() in ('1', 'true', 'on'), "set INTEGRATION_TEST environment variable (e.g. INTEGRATION_TEST=true) for running the integration tests")
 class IntegrationTest(unittest.TestCase):
 
     @classmethod

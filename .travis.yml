@@ -5,7 +5,7 @@ python:
 env:
     - CKANVERSION=2.6.3 POSTGISVERSION=2
     - CKANVERSION=2.7.2 POSTGISVERSION=2
-    - CKANVERSION=2.7.3 POSTGISVERSION=2
+    - CKANVERSION=2.7.3 POSTGISVERSION=2 INTEGRATION_TEST=true
 services:
     - redis-server
     - postgresql
@@ -18,7 +18,7 @@ before_script:
   - "sh -e /etc/init.d/xvfb start"
   - sleep 3 # give xvfb some time to start
 script:
-    - sh bin/travis-run.sh
+    - bash bin/travis-run.sh
 after_success: coveralls
 branches:
   only:
