@@ -33,7 +33,6 @@ import os
 from base64 import b64encode, b64decode
 from ckan.plugins import toolkit
 from oauthlib.oauth2 import InsecureTransportError
-from pylons import config
 import requests
 from requests_oauthlib import OAuth2Session
 import six
@@ -55,20 +54,21 @@ class OAuth2Helper(object):
 
         self.verify_https = os.environ.get('OAUTHLIB_INSECURE_TRANSPORT', '') == ""
 
-        self.legacy_idm = six.text_type(config.get('ckan.oauth2.legacy_idm', '')).strip().lower() == "true"
-        self.authorization_endpoint = config.get('ckan.oauth2.authorization_endpoint', None)
-        self.token_endpoint = config.get('ckan.oauth2.token_endpoint', None)
-        self.profile_api_url = config.get('ckan.oauth2.profile_api_url', None)
-        self.client_id = config.get('ckan.oauth2.client_id', None)
-        self.client_secret = config.get('ckan.oauth2.client_secret', None)
-        self.scope = config.get('ckan.oauth2.scope', '').decode()
-        self.rememberer_name = config.get('ckan.oauth2.rememberer_name', None)
-        self.profile_api_user_field = config.get('ckan.oauth2.profile_api_user_field', None)
-        self.profile_api_fullname_field = config.get('ckan.oauth2.profile_api_fullname_field', None)
-        self.profile_api_mail_field = config.get('ckan.oauth2.profile_api_mail_field', None)
-        self.profile_api_groupmembership_field = config.get('ckan.oauth2.profile_api_groupmembership_field', None)
-        self.sysadmin_group_name = config.get('ckan.oauth2.sysadmin_group_name', None)
-        self.redirect_uri = urljoin(urljoin(config.get('ckan.site_url', 'http://localhost:5000'), config.get('ckan.root_path')), constants.REDIRECT_URL)
+        self.legacy_idm = six.text_type(os.environ.get('CKAN_OAUTH2_LEGACY_IDM', toolkit.config.get('ckan.oauth2.legacy_idm', ''))).strip().lower() in ("true", "1", "on")
+        self.authorization_endpoint = six.text_type(os.environ.get('CKAN_OAUTH2_AUTHORIZATION_ENDPOINT', toolkit.config.get('ckan.oauth2.authorization_endpoint', None)))
+        self.token_endpoint = six.text_type(os.environ.get('CKAN_OAUTH2_TOKEN_ENDPOINT', toolkit.config.get('ckan.oauth2.token_endpoint', None)))
+        self.profile_api_url = six.text_type(os.environ.get('CKAN_OAUTH2_PROFILE_API_URL', toolkit.config.get('ckan.oauth2.profile_api_url', None)))
+        self.client_id = six.text_type(os.environ.get('CKAN_OAUTH2_CLIENT_ID', toolkit.config.get('ckan.oauth2.client_id', None)))
+        self.client_secret = six.text_type(os.environ.get('CKAN_OAUTH2_CLIENT_SECRET', toolkit.config.get('ckan.oauth2.client_secret', None)))
+        self.scope = six.text_type(os.environ.get('CKAN_OAUTH2_SCOPE', toolkit.config.get('ckan.oauth2.scope', '')))
+        self.rememberer_name = six.text_type(os.environ.get('CKAN_OAUTH2_REMEMBER_NAME', toolkit.config.get('ckan.oauth2.rememberer_name', None)))
+        self.profile_api_user_field = six.text_type(os.environ.get('CKAN_OAUTH2_PROFILE_API_USER_FIELD', toolkit.config.get('ckan.oauth2.profile_api_user_field', None)))
+        self.profile_api_fullname_field = six.text_type(os.environ.get('CKAN_OAUTH2_PROFILE_API_FULLNAME_FIELD', toolkit.config.get('ckan.oauth2.profile_api_fullname_field', None)))
+        self.profile_api_mail_field = six.text_type(os.environ.get('CKAN_OAUTH2_PROFILE_API_MAIL_FIELD', toolkit.config.get('ckan.oauth2.profile_api_mail_field', None)))
+        self.profile_api_groupmembership_field = six.text_type(os.environ.get('CKAN_OAUTH2_PROFILE_API_GROUPMEMBERSHIP_FIELD', toolkit.config.get('ckan.oauth2.profile_api_groupmembership_field', None)))
+        self.sysadmin_group_name = six.text_type(os.environ.get('CKAN_OAUTH2_SYSADMIN_GROUP_NAME', toolkit.config.get('ckan.oauth2.sysadmin_group_name', None)))
+
+        self.redirect_uri = urljoin(urljoin(toolkit.config.get('ckan.site_url', 'http://localhost:5000'), toolkit.config.get('ckan.root_path')), constants.REDIRECT_URL)
 
         # Init db
         db.init_db(model)
