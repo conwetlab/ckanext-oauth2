@@ -24,7 +24,7 @@ import ckanext.oauth2.plugin as plugin
 from mock import MagicMock
 from parameterized import parameterized
 
-AUTHORIZATION_HEADER = 'Custom_Header'
+AUTHORIZATION_HEADER = 'custom_header'
 HOST = 'data.lab.fiware.org'
 
 
@@ -32,21 +32,20 @@ class PluginTest(unittest.TestCase):
 
     def setUp(self):
         # Save functions and mock them
-        self._config = plugin.config
-        plugin.config = {'ckan.oauth2.authorization_header': AUTHORIZATION_HEADER}
 
         self._toolkit = plugin.toolkit
         plugin.toolkit = MagicMock()
+        plugin.toolkit.config = {'ckan.oauth2.authorization_header': AUTHORIZATION_HEADER}
 
         self._oauth2 = plugin.oauth2
         plugin.oauth2 = MagicMock()
 
         # Create the plugin
         self._plugin = plugin.OAuth2Plugin()
+        self._plugin.update_config(plugin.toolkit.config)
 
     def tearDown(self):
         # Unmock functions
-        plugin.config = self._config
         plugin.toolkit = self._toolkit
 
     def _set_identity(self, identity):
@@ -64,16 +63,18 @@ class PluginTest(unittest.TestCase):
     def test_before_map(self, register_url=None, reset_url=None, edit_url=None):
 
         # Setup the config dictionary
-        plugin.config = {}
+        plugin.toolkit.config = {}
 
         if register_url:
-            plugin.config['ckan.oauth2.register_url'] = register_url
+            plugin.toolkit.config['ckan.oauth2.register_url'] = register_url
 
         if reset_url:
-            plugin.config['ckan.oauth2.reset_url'] = reset_url
+            plugin.toolkit.config['ckan.oauth2.reset_url'] = reset_url
 
         if edit_url:
-            plugin.config['ckan.oauth2.edit_url'] = edit_url
+            plugin.toolkit.config['ckan.oauth2.edit_url'] = edit_url
+
+        self._plugin.update_config(plugin.toolkit.config)
 
         # In this case we need a own instance of the plugin, so we create it
         self._plugin = plugin.OAuth2Plugin()
@@ -141,9 +142,9 @@ class PluginTest(unittest.TestCase):
             else:
                 return authenticate_result
 
-        plugin.oauth2.OAuth2Helper.return_value.identify.side_effect = authenticate_side_effect
-        plugin.oauth2.OAuth2Helper.return_value.get_stored_token = MagicMock(return_value=usertoken)
-        plugin.oauth2.OAuth2Helper.return_value.refresh_token = MagicMock(return_value=newtoken)
+        self._plugin.oauth2helper.identify = MagicMock(side_effect=authenticate_side_effect)
+        self._plugin.oauth2helper.get_stored_token = MagicMock(return_value=usertoken)
+        self._plugin.oauth2helper.refresh_token = MagicMock(return_value=newtoken)
 
         # Authentication header is not included
         plugin.toolkit.request.headers = headers
@@ -158,9 +159,9 @@ class PluginTest(unittest.TestCase):
 
         # Check that the function "authenticate" (called when the API Key is included) has not been called
         if headers and AUTHORIZATION_HEADER in headers:
-            plugin.oauth2.OAuth2Helper.return_value.identify.assert_called_once_with({'access_token': headers[AUTHORIZATION_HEADER]})
+            self._plugin.oauth2helper.identify.assert_called_once_with({'access_token': headers[AUTHORIZATION_HEADER]})
         else:
-            self.assertEquals(0, plugin.oauth2.OAuth2Helper.return_value.identify.call_count)
+            self.assertEquals(0, self._plugin.oauth2helper.identify.call_count)
 
         self.assertEquals(expected_user, plugin.toolkit.c.user)
 
@@ -172,7 +173,7 @@ class PluginTest(unittest.TestCase):
 
             # method 'usertoken_refresh' should relay on the one provided by the repoze.who module
             plugin.toolkit.c.usertoken_refresh()
-            plugin.oauth2.OAuth2Helper.return_value.refresh_token.assert_called_once_with(expected_user)
+            self._plugin.oauth2helper.refresh_token.assert_called_once_with(expected_user)
             self.assertEquals(newtoken, plugin.toolkit.c.usertoken)
 
     @parameterized.expand([
@@ -194,6 +195,8 @@ class PluginTest(unittest.TestCase):
         plugin.toolkit.request.headers = {}
         plugin.toolkit.request.params = {}
 
+        self._plugin.oauth2helper.challenge = MagicMock()
+
         if referer:
             plugin.toolkit.request.headers['Referer'] = referer
 
@@ -203,7 +206,7 @@ class PluginTest(unittest.TestCase):
         # Call the function
         self._plugin.login()
 
-        plugin.oauth2.OAuth2Helper.return_value.challenge.assert_called_once_with(expected_referer)
+        self._plugin.oauth2helper.challenge.assert_called_once_with(expected_referer)
 
     @parameterized.expand([
         (),

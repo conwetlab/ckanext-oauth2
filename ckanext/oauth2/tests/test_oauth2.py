@@ -75,6 +75,9 @@ class OAuth2PluginTest(unittest.TestCase):
         self._db = oauth2.db
         self._OAuth2Session = oauth2.OAuth2Session
 
+        # Mock toolkit
+        oauth2.toolkit = MagicMock()
+
     def tearDown(self):
         # Reset the functions
         oauth2.toolkit = self._toolkit
@@ -86,7 +89,7 @@ class OAuth2PluginTest(unittest.TestCase):
     def _helper(self, fullname_field=True, mail_field=True, conf=None):
         oauth2.db = MagicMock()
 
-        oauth2.config = {
+        oauth2.toolkit.config = {
             'ckan.oauth2.legacy_idm': 'false',
             'ckan.oauth2.authorization_endpoint': 'https://test/oauth2/authorize/',
             'ckan.oauth2.token_endpoint': 'https://test/oauth2/token/',
@@ -97,7 +100,7 @@ class OAuth2PluginTest(unittest.TestCase):
             'ckan.oauth2.profile_api_mail_field': self._email_field,
         }
         if conf is not None:
-            oauth2.config.update(conf)
+            oauth2.toolkit.config.update(conf)
 
         helper = OAuth2Helper()
 
@@ -106,19 +109,19 @@ class OAuth2PluginTest(unittest.TestCase):
 
         return helper
 
-    def test_get_token_with_no_credentials(self):
-        oauth2.toolkit = MagicMock()
+    @patch('ckanext.oauth2.oauth2.OAuth2Session')
+    def test_get_token_with_no_credentials(self, oauth2_session_mock):
         state = b64encode(json.dumps({'came_from': 'initial-page'}))
         oauth2.toolkit.request = make_request(True, 'data.com', 'callback', {'state': state})
 
         helper = self._helper()
 
+        oauth2_session_mock().fetch_token.side_effect = MissingCodeError("Missing code parameter in response.")
         with self.assertRaises(MissingCodeError):
             helper.get_token()
 
     @httpretty.activate
     def test_get_token(self):
-        oauth2.toolkit = MagicMock()
         helper = self._helper()
         token = OAUTH2TOKEN
         httpretty.register_uri(httpretty.POST, helper.token_endpoint, body=json.dumps(token))
@@ -134,7 +137,6 @@ class OAuth2PluginTest(unittest.TestCase):
     @httpretty.activate
     @patch.dict(os.environ, {'OAUTHLIB_INSECURE_TRANSPORT': ''})
     def test_get_token_insecure(self):
-        oauth2.toolkit = MagicMock()
         helper = self._helper()
         token = OAUTH2TOKEN
         httpretty.register_uri(httpretty.POST, helper.token_endpoint, body=json.dumps(token))
@@ -148,7 +150,6 @@ class OAuth2PluginTest(unittest.TestCase):
     @httpretty.activate
     @patch.dict(os.environ, {'OAUTHLIB_INSECURE_TRANSPORT': ''})
     def test_get_token_invalid_cert(self):
-        oauth2.toolkit = MagicMock()
         helper = self._helper()
         token = OAUTH2TOKEN
         httpretty.register_uri(httpretty.POST, helper.token_endpoint, body=json.dumps(token))
@@ -164,7 +165,6 @@ class OAuth2PluginTest(unittest.TestCase):
     @httpretty.activate
     @patch.dict(os.environ, {'OAUTHLIB_INSECURE_TRANSPORT': 'True'})
     def test_get_token_insecure_enabled(self):
-        oauth2.toolkit = MagicMock()
         helper = self._helper()
         token = OAUTH2TOKEN
         httpretty.register_uri(httpretty.POST, helper.token_endpoint, body=json.dumps(token))
@@ -179,7 +179,6 @@ class OAuth2PluginTest(unittest.TestCase):
 
     @httpretty.activate
     def test_get_token_error(self):
-        oauth2.toolkit = MagicMock()
         helper = self._helper()
         token = {
             'error': 'auth_error',
@@ -202,7 +201,6 @@ class OAuth2PluginTest(unittest.TestCase):
         user_name = 'user_name'
 
         # Configure the mocks
-        oauth2.toolkit = MagicMock()
         environ = MagicMock()
         plugins = MagicMock()
         authenticator = MagicMock()
@@ -232,7 +230,6 @@ class OAuth2PluginTest(unittest.TestCase):
         request.headers = {}
         came_from = '/came_from_example'
 
-        oauth2.toolkit = MagicMock()
         oauth2.toolkit.request = request
         oauth2.toolkit.response = MagicMock()
 
@@ -280,7 +277,6 @@ class OAuth2PluginTest(unittest.TestCase):
         # Create the mocks
         request = MagicMock()
         request = make_request(False, 'localhost', '/oauth2/callback', {})
-        oauth2.toolkit = MagicMock()
         oauth2.toolkit.request = request
         oauth2.model.Session = MagicMock()
         user = MagicMock()
@@ -386,7 +382,6 @@ class OAuth2PluginTest(unittest.TestCase):
         ({},)
     ])
     def test_redirect_from_callback(self, identity):
-        oauth2.toolkit = MagicMock()
         came_from = 'initial-page'
         state = b64encode(json.dumps({'came_from': came_from}))
         oauth2.toolkit.request = make_request(True, 'data.com', 'callback', {'state': state, 'code': 'code'})
