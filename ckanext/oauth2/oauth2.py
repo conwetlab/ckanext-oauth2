@@ -163,10 +163,7 @@ class OAuth2Helper(object):
 
             # Update sysadmin status
             if self.profile_api_groupmembership_field != "" and self.profile_api_groupmembership_field in user_data:
-                if self.sysadmin_group_name in user_data[self.profile_api_groupmembership_field]:
-                    user.sysadmin = True
-                else:
-                    user.sysadmin = False
+                user.sysadmin = self.sysadmin_group_name in user_data[self.profile_api_groupmembership_field]
 
             # Save the user in the database
             model.Session.add(user)

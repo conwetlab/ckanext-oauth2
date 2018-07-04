@@ -67,6 +67,7 @@ class OAuth2PluginTest(unittest.TestCase):
         self._fullname_field = 'fullname'
         self._email_field = 'mail'
         self._profile_api_url = 'https://test/oauth2/user'
+        self._group_field = 'groups'
 
         # Get the functions that can be mocked and affect other tests
         self._toolkit = oauth2.toolkit
@@ -122,7 +123,7 @@ class OAuth2PluginTest(unittest.TestCase):
     ])
     def test_minimum_conf(self, conf_to_remove):
         with self.assertRaises(ValueError):
-            helper = self._helper(missing_conf=conf_to_remove)
+            self._helper(missing_conf=conf_to_remove)
 
     @patch('ckanext.oauth2.oauth2.OAuth2Session')
     def test_get_token_with_no_credentials(self, oauth2_session_mock):
@@ -275,20 +276,23 @@ class OAuth2PluginTest(unittest.TestCase):
 
     @parameterized.expand([
         ('test_user', 'Test User Full Name', 'test@test.com'),
-        ('test_user', None, 'test@test.com'),
-        # ('test_user', 'Test User Full Name', None),
+        ('test_user', None,                  'test@test.com'),
+        # ('test_user', 'Test User Full Name',  None),
         ('test_user', 'Test User Full Name', 'test@test.com', False),
-        ('test_user', None, 'test@test.com', False),
-        ('test_user', 'Test User Full Name', 'test@test.com', True, True),
-        ('test_user', None, 'test@test.com', True, True),
-        # ('test_user', 'Test User Full Name', None, True, True),
+        ('test_user', None,                  'test@test.com', False),
+        ('test_user', None,                  'test@test.com', False, False, False),
+        ('test_user', None,                  'test@test.com', False, False, True),
         ('test_user', 'Test User Full Name', 'test@test.com', True, True),
         ('test_user', 'Test User Full Name', 'test@test.com', True, False),
-        ('test_user', None, 'test@test.com', True, False),
+        ('test_user', 'Test User Full Name', 'test@test.com', True, True, True),
+        ('test_user', 'Test User Full Name', 'test@test.com', True, True, False),
+        ('test_user', None,                  'test@test.com', True, True),
+        # ('test_user', 'Test User Full Name', None, True, True),
+        ('test_user', None,                  'test@test.com', True, False),
     ])
     @httpretty.activate
     def test_identify(self, username, fullname=None, email=None, user_exists=True,
-                      fullname_field=True):
+                      fullname_field=True, sysadmin=None):
 
         self.helper = helper = self._helper(fullname_field)
 
@@ -300,9 +304,14 @@ class OAuth2PluginTest(unittest.TestCase):
         if fullname:
             user_info[self._fullname_field] = fullname
 
+        if sysadmin is not None:
+            self.helper.profile_api_groupmembership_field = self._group_field
+            self.helper.sysadmin_group_name = "admin"
+            user_info[self._group_field] = "admin" if sysadmin else "other"
+
         httpretty.register_uri(httpretty.GET, self._profile_api_url, body=json.dumps(user_info))
 
-        print(username, fullname, email, user_exists, fullname_field)
+        print(username, fullname, email, user_exists, fullname_field, sysadmin)
 
         # Create the mocks
         request = MagicMock()
@@ -334,6 +343,8 @@ class OAuth2PluginTest(unittest.TestCase):
         # Check that user properties are set properly
         self.assertEquals(username, user.name)
         self.assertEquals(email, user.email)
+        if sysadmin is not None:
+            self.assertEquals(sysadmin, user.sysadmin)
 
         if fullname and fullname_field:
             self.assertEquals(fullname, user.fullname)
