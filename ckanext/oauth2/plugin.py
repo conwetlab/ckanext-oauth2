@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2014 CoNWeT Lab., Universidad Politécnica de Madrid
+# Copyright (c) 2018 Future Internet Consulting and Development Solutions S.L.
 
 # This file is part of OAuth2 CKAN Extension.
 
@@ -22,11 +23,11 @@ from __future__ import unicode_literals
 import constants
 import logging
 import oauth2
+import os
 
 from functools import partial
 from ckan import plugins
 from ckan.plugins import toolkit
-from pylons import config
 from urlparse import urlparse
 
 log = logging.getLogger(__name__)
@@ -72,11 +73,6 @@ class OAuth2Plugin(plugins.SingletonPlugin):
         '''Store the OAuth 2 client configuration'''
         log.debug('Init OAuth2 extension')
 
-        self.register_url = config.get('ckan.oauth2.register_url', None)
-        self.reset_url = config.get('ckan.oauth2.reset_url', None)
-        self.edit_url = config.get('ckan.oauth2.edit_url', None)
-        self.authorization_header = config.get('ckan.oauth2.authorization_header', 'Authorization')
-
         self.oauth2helper = oauth2.OAuth2Helper()
 
     def before_map(self, m):
@@ -88,7 +84,7 @@ class OAuth2Plugin(plugins.SingletonPlugin):
                   controller='ckanext.oauth2.controller:OAuth2Controller',
                   action='callback')
 
-        # # Redirect the user to the OAuth service register page
+        # Redirect the user to the OAuth service register page
         if self.register_url:
             m.redirect('/user/register', self.register_url)
 
@@ -203,6 +199,12 @@ class OAuth2Plugin(plugins.SingletonPlugin):
         }
 
     def update_config(self, config):
+        # Update our configuration
+        self.register_url = os.environ.get("CKAN_OAUTH2_REGISTER_URL", config.get('ckan.oauth2.register_url', None))
+        self.reset_url = os.environ.get("CKAN_OAUTH2_RESET_URL", config.get('ckan.oauth2.reset_url', None))
+        self.edit_url = os.environ.get("CKAN_OAUTH2_EDIT_URL", config.get('ckan.oauth2.edit_url', None))
+        self.authorization_header = os.environ.get("CKAN_OAUTH2_AUTHORIZATION_HEADER", config.get('ckan.oauth2.authorization_header', 'Authorization')).lower()
+
         # Add this plugin's templates dir to CKAN's extra_template_paths, so
         # that CKAN will use this plugin's custom templates.
         plugins.toolkit.add_template_directory(config, 'templates')
