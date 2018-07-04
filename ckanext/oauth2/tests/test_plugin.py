@@ -21,7 +21,7 @@
 import unittest
 import ckanext.oauth2.plugin as plugin
 
-from mock import MagicMock
+from mock import MagicMock, patch
 from parameterized import parameterized
 
 AUTHORIZATION_HEADER = 'custom_header'
@@ -110,7 +110,7 @@ class PluginTest(unittest.TestCase):
             self.assertEquals(False, function_result['success'])
 
     @parameterized.expand([
-        (),
+        ({},                                None,                      None,  None),
         ({},                                None,                      'test',  'test'),
         ({AUTHORIZATION_HEADER: 'api_key'}, 'test',                    None,    'test'),
         ({AUTHORIZATION_HEADER: 'api_key'}, 'test',                    'test2', 'test'),
@@ -119,7 +119,8 @@ class PluginTest(unittest.TestCase):
         ({'invalid_header': 'api_key'},     'test',                    None,    None),
         ({'invalid_header': 'api_key'},     'test',                    'test2', 'test2'),
     ])
-    def test_identify(self, headers={}, authenticate_result=None, identity=None, expected_user=None):
+    @patch("ckanext.oauth2.plugin.g")
+    def test_identify(self, headers, authenticate_result, identity, expected_user, g_mock):
 
         self._set_identity(identity)
 
@@ -163,6 +164,7 @@ class PluginTest(unittest.TestCase):
         else:
             self.assertEquals(0, self._plugin.oauth2helper.identify.call_count)
 
+        self.assertEquals(expected_user, g_mock.user)
         self.assertEquals(expected_user, plugin.toolkit.c.user)
 
         if expected_user is None:
@@ -175,38 +177,6 @@ class PluginTest(unittest.TestCase):
             plugin.toolkit.c.usertoken_refresh()
             self._plugin.oauth2helper.refresh_token.assert_called_once_with(expected_user)
             self.assertEquals(newtoken, plugin.toolkit.c.usertoken)
-
-    @parameterized.expand([
-        (),
-        (None,                        None,               '/dashboard'),
-        ('/about',                    None,               '/about'),
-        ('/about',                    '/ckan-admin',      '/ckan-admin'),
-        (None,                        '/ckan-admin',      '/ckan-admin'),
-        ('/',                         None,               '/dashboard'),
-        ('/user/logged_out_redirect', None,               '/dashboard'),
-        ('/',                         '/ckan-admin',      '/ckan-admin'),
-        ('/user/logged_out_redirect', '/ckan-admin',      '/ckan-admin'),
-        ('http://google.es',          None,               '/dashboard'),
-        ('http://google.es',          None,               '/dashboard')
-    ])
-    def test_login(self, referer=None, came_from=None, expected_referer='/dashboard'):
-
-        # The login function will check these variables
-        plugin.toolkit.request.headers = {}
-        plugin.toolkit.request.params = {}
-
-        self._plugin.oauth2helper.challenge = MagicMock()
-
-        if referer:
-            plugin.toolkit.request.headers['Referer'] = referer
-
-        if came_from:
-            plugin.toolkit.request.params['came_from'] = came_from
-
-        # Call the function
-        self._plugin.login()
-
-        self._plugin.oauth2helper.challenge.assert_called_once_with(expected_referer)
 
     @parameterized.expand([
         (),

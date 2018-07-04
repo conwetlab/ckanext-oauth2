@@ -251,7 +251,8 @@ class OAuth2PluginTest(unittest.TestCase):
         for header, value in headers:
             oauth2.toolkit.response.headers.add.assert_any_call(header, value)
 
-    def test_challenge(self):
+    @patch("ckanext.oauth2.oauth2.h")
+    def test_challenge(self, h_mock):
         helper = self._helper()
 
         # Build mocks
@@ -262,7 +263,6 @@ class OAuth2PluginTest(unittest.TestCase):
         came_from = '/came_from_example'
 
         oauth2.toolkit.request = request
-        oauth2.toolkit.response = MagicMock()
 
         # Call the method
         helper.challenge(came_from)
@@ -271,8 +271,7 @@ class OAuth2PluginTest(unittest.TestCase):
         state = urlencode({'state': b64encode(bytes(json.dumps({'came_from': came_from})))})
         expected_url = 'https://test/oauth2/authorize/?response_type=code&client_id=client-id&' + \
                        'redirect_uri=http%3A%2F%2Flocalhost%3A5000%2Foauth2%2Fcallback&' + state
-        self.assertEquals(302, oauth2.toolkit.response.status)
-        self.assertEquals(expected_url, oauth2.toolkit.response.location)
+        h_mock.redirect_to.assert_called_once_with(expected_url)
 
     @parameterized.expand([
         ('test_user', 'Test User Full Name', 'test@test.com'),

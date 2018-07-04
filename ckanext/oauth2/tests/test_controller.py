@@ -18,13 +18,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OAuth2 CKAN Extension.  If not, see <http://www.gnu.org/licenses/>.
 
+from base64 import b64decode, b64encode
 import unittest
-import ckanext.oauth2.controller as controller
 import json
 
-from base64 import b64decode, b64encode
 from mock import MagicMock
 from parameterized import parameterized
+
+from ckanext.oauth2 import controller, plugin
+
 
 RETURNED_STATUS = 302
 EXAMPLE_FLASH = 'This is a test'
@@ -55,8 +57,9 @@ class OAuth2PluginTest(unittest.TestCase):
         self._oauth2 = controller.oauth2
         controller.oauth2 = MagicMock()
 
-        self._toolkit = controller.toolkit
-        controller.toolkit = MagicMock()
+        self._toolkit_controller = controller.toolkit
+        self._toolkit_plugin = plugin.toolkit
+        plugin.toolkit = controller.toolkit = MagicMock()
 
         self.__session = controller.session
         controller.session = MagicMock()
@@ -67,8 +70,9 @@ class OAuth2PluginTest(unittest.TestCase):
         # Unmock the function
         controller.helpers = self._helpers
         controller.oauth2 = self._oauth2
-        controller.toolkit = self._toolkit
+        controller.toolkit = self._toolkit_controller
         controller.session = self.__session
+        plugin.toolkit = self._toolkit_plugin
 
     def generate_state(self, url):
         return b64encode(bytes(json.dumps({CAME_FROM_FIELD: url})))
@@ -76,7 +80,7 @@ class OAuth2PluginTest(unittest.TestCase):
     def get_came_from(self, state):
         return json.loads(b64decode(state)).get(CAME_FROM_FIELD, '/')
 
-    def test_controller_no_errors(self):
+    def test_callback_no_errors(self):
         oauth2Helper = controller.oauth2.OAuth2Helper.return_value
 
         token = 'TOKEN'
@@ -104,7 +108,7 @@ class OAuth2PluginTest(unittest.TestCase):
         ('/', VoidException(), None, type(VoidException()).__name__),
         ('/about', Exception(EXCEPTION_MSG), EXAMPLE_FLASH, EXAMPLE_FLASH)
     ])
-    def test_controller_errors(self, came_from=None, exception=Exception(EXCEPTION_MSG),
+    def test_callback_errors(self, came_from=None, exception=Exception(EXCEPTION_MSG),
                                error_description=None, expected_flash=EXCEPTION_MSG):
 
         # Recover function
@@ -127,3 +131,33 @@ class OAuth2PluginTest(unittest.TestCase):
         self.assertEquals(RETURNED_STATUS, controller.toolkit.response.status_int)
         self.assertEquals(came_from, controller.toolkit.response.location)
         controller.helpers.flash_error.assert_called_once_with(expected_flash)
+
+    @parameterized.expand([
+        (),
+        (None,                        None,               '/dashboard'),
+        ('/about',                    None,               '/about'),
+        ('/about',                    '/ckan-admin',      '/ckan-admin'),
+        (None,                        '/ckan-admin',      '/ckan-admin'),
+        ('/',                         None,               '/dashboard'),
+        ('/user/logged_out_redirect', None,               '/dashboard'),
+        ('/',                         '/ckan-admin',      '/ckan-admin'),
+        ('/user/logged_out_redirect', '/ckan-admin',      '/ckan-admin'),
+        ('http://google.es',          None,               '/dashboard'),
+        ('http://google.es',          None,               '/dashboard')
+    ])
+    def test_login(self, referer=None, came_from=None, expected_referer='/dashboard'):
+
+        # The login function will check these variables
+        controller.toolkit.request.headers = {}
+        controller.toolkit.request.params = {}
+
+        if referer:
+            controller.toolkit.request.headers['Referer'] = referer
+
+        if came_from:
+            controller.toolkit.request.params['came_from'] = came_from
+
+        # Call the function
+        self.controller.login()
+
+        self.controller.oauth2helper.challenge.assert_called_once_with(expected_referer)

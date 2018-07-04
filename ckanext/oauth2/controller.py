@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2014 CoNWeT Lab., Universidad Politécnica de Madrid
+# Copyright (c) 2018 Future Internet Consulting and Development Solutions S.L.
 
 # This file is part of OAuth2 CKAN Extension.
 
@@ -25,7 +26,7 @@ import ckan.lib.helpers as helpers
 import ckan.lib.base as base
 
 from ckan.common import session
-from ckanext.oauth2.plugin import toolkit
+from ckanext.oauth2.plugin import toolkit, _get_previous_page
 
 
 log = logging.getLogger(__name__)
@@ -35,6 +36,19 @@ class OAuth2Controller(base.BaseController):
 
     def __init__(self):
         self.oauth2helper = oauth2.OAuth2Helper()
+
+    def login(self):
+        log.debug('login')
+
+        # Log in attemps are fired when the user is not logged in and they click
+        # on the log in button
+
+        # Get the page where the user was when the loggin attemp was fired
+        # When the user is not logged in, he/she should be redirected to the dashboard when
+        # the system cannot get the previous page
+        came_from_url = _get_previous_page(constants.INITIAL_PAGE)
+
+        self.oauth2helper.challenge(came_from_url)
 
     def callback(self):
         try:

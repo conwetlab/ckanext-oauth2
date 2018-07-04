@@ -31,6 +31,7 @@ from six.moves.urllib.parse import urljoin
 import os
 
 from base64 import b64encode, b64decode
+from ckan.lib import helpers as h
 from ckan.plugins import toolkit
 from oauthlib.oauth2 import InsecureTransportError
 import requests
@@ -85,9 +86,8 @@ class OAuth2Helper(object):
         state = generate_state(came_from_url)
         oauth = OAuth2Session(self.client_id, redirect_uri=self.redirect_uri, scope=self.scope, state=state)
         auth_url, _ = oauth.authorization_url(self.authorization_endpoint)
-        toolkit.response.status = 302
-        toolkit.response.location = auth_url
         log.debug('Challenge: Redirecting challenge to page {0}'.format(auth_url))
+        return h.redirect_to(auth_url)
 
     def get_token(self):
         oauth = OAuth2Session(self.client_id, redirect_uri=self.redirect_uri, scope=self.scope)
