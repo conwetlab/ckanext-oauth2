@@ -49,11 +49,16 @@ def get_came_from(state):
     return json.loads(b64decode(state)).get(constants.CAME_FROM_FIELD, '/')
 
 
+REQUIRED_CONF = ("authorization_endpoint", "token_endpoint", "client_id", "client_secret", "profile_api_url", "profile_api_user_field", "profile_api_mail_field")
+
+
 class OAuth2Helper(object):
 
     def __init__(self):
 
         self.verify_https = os.environ.get('OAUTHLIB_INSECURE_TRANSPORT', '') == ""
+        if self.verify_https and os.environ.get("REQUESTS_CA_BUNDLE", "").strip() != "":
+            self.verify_https = os.environ["REQUESTS_CA_BUNDLE"].strip()
 
         self.legacy_idm = six.text_type(os.environ.get('CKAN_OAUTH2_LEGACY_IDM', toolkit.config.get('ckan.oauth2.legacy_idm', ''))).strip().lower() in ("true", "1", "on")
         self.authorization_endpoint = six.text_type(os.environ.get('CKAN_OAUTH2_AUTHORIZATION_ENDPOINT', toolkit.config.get('ckan.oauth2.authorization_endpoint', ''))).strip()

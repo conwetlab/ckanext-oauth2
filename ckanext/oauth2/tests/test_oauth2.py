@@ -491,7 +491,7 @@ class OAuth2PluginTest(unittest.TestCase):
         (True,),
         (False,)
     ])
-    @patch.dict(os.environ, {'OAUTHLIB_INSECURE_TRANSPORT': ''})
+    @patch.dict(os.environ, {'OAUTHLIB_INSECURE_TRANSPORT': '', 'REQUESTS_CA_BUNDLE': ''})
     def test_refresh_token(self, user_exists):
         username = 'user'
         helper = self.helper = self._helper()
