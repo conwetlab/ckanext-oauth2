@@ -262,7 +262,6 @@ class OAuth2PluginTest(unittest.TestCase):
         came_from = '/came_from_example'
 
         oauth2.toolkit.request = request
-        oauth2.toolkit.response = MagicMock()
 
         # Call the method
         helper.challenge(came_from)
@@ -271,8 +270,7 @@ class OAuth2PluginTest(unittest.TestCase):
         state = urlencode({'state': b64encode(bytes(json.dumps({'came_from': came_from})))})
         expected_url = 'https://test/oauth2/authorize/?response_type=code&client_id=client-id&' + \
                        'redirect_uri=http%3A%2F%2Flocalhost%3A5000%2Foauth2%2Fcallback&' + state
-        self.assertEquals(302, oauth2.toolkit.response.status)
-        self.assertEquals(expected_url, oauth2.toolkit.response.location)
+        oauth2.toolkit.redirect_to.assert_called_once_with(expected_url)
 
     @parameterized.expand([
         ('test_user', 'Test User Full Name', 'test@test.com'),
@@ -492,7 +490,7 @@ class OAuth2PluginTest(unittest.TestCase):
         (True,),
         (False,)
     ])
-    @patch.dict(os.environ, {'OAUTHLIB_INSECURE_TRANSPORT': ''})
+    @patch.dict(os.environ, {'OAUTHLIB_INSECURE_TRANSPORT': '', 'REQUESTS_CA_BUNDLE': ''})
     def test_refresh_token(self, user_exists):
         username = 'user'
         helper = self.helper = self._helper()

@@ -6,7 +6,7 @@ OAuth2 CKAN extension
 
 The OAuth2 extension allows site visitors to login through an OAuth2 server.
 
-**Note**: This extension is being tested in CKAN 2.6 and 2.7. These are therefore considered as the supported versions
+**Note**: This extension is being tested in CKAN 2.6, 2.7 and 2.8. These are therefore considered as the supported versions
 
 
 ## Links

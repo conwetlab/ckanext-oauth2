@@ -21,7 +21,7 @@
 import unittest
 import ckanext.oauth2.plugin as plugin
 
-from mock import MagicMock
+from mock import MagicMock, patch
 from parameterized import parameterized
 
 AUTHORIZATION_HEADER = 'custom_header'
@@ -110,7 +110,7 @@ class PluginTest(unittest.TestCase):
             self.assertEquals(False, function_result['success'])
 
     @parameterized.expand([
-        (),
+        ({},                                None,                      None,  None),
         ({},                                None,                      'test',  'test'),
         ({AUTHORIZATION_HEADER: 'api_key'}, 'test',                    None,    'test'),
         ({AUTHORIZATION_HEADER: 'api_key'}, 'test',                    'test2', 'test'),
@@ -119,7 +119,8 @@ class PluginTest(unittest.TestCase):
         ({'invalid_header': 'api_key'},     'test',                    None,    None),
         ({'invalid_header': 'api_key'},     'test',                    'test2', 'test2'),
     ])
-    def test_identify(self, headers={}, authenticate_result=None, identity=None, expected_user=None):
+    @patch("ckanext.oauth2.plugin.g")
+    def test_identify(self, headers, authenticate_result, identity, expected_user, g_mock):
 
         self._set_identity(identity)
 
@@ -163,6 +164,7 @@ class PluginTest(unittest.TestCase):
         else:
             self.assertEquals(0, self._plugin.oauth2helper.identify.call_count)
 
+        self.assertEquals(expected_user, g_mock.user)
         self.assertEquals(expected_user, plugin.toolkit.c.user)
 
         if expected_user is None:
@@ -175,92 +177,3 @@ class PluginTest(unittest.TestCase):
             plugin.toolkit.c.usertoken_refresh()
             self._plugin.oauth2helper.refresh_token.assert_called_once_with(expected_user)
             self.assertEquals(newtoken, plugin.toolkit.c.usertoken)
-
-    @parameterized.expand([
-        (),
-        (None,                        None,               '/dashboard'),
-        ('/about',                    None,               '/about'),
-        ('/about',                    '/ckan-admin',      '/ckan-admin'),
-        (None,                        '/ckan-admin',      '/ckan-admin'),
-        ('/',                         None,               '/dashboard'),
-        ('/user/logged_out_redirect', None,               '/dashboard'),
-        ('/',                         '/ckan-admin',      '/ckan-admin'),
-        ('/user/logged_out_redirect', '/ckan-admin',      '/ckan-admin'),
-        ('http://google.es',          None,               '/dashboard'),
-        ('http://google.es',          None,               '/dashboard')
-    ])
-    def test_login(self, referer=None, came_from=None, expected_referer='/dashboard'):
-
-        # The login function will check these variables
-        plugin.toolkit.request.headers = {}
-        plugin.toolkit.request.params = {}
-
-        self._plugin.oauth2helper.challenge = MagicMock()
-
-        if referer:
-            plugin.toolkit.request.headers['Referer'] = referer
-
-        if came_from:
-            plugin.toolkit.request.params['came_from'] = came_from
-
-        # Call the function
-        self._plugin.login()
-
-        self._plugin.oauth2helper.challenge.assert_called_once_with(expected_referer)
-
-    @parameterized.expand([
-        (),
-        ('user', None,                        None,               None,                                     '/'),
-        ('user', None,                        None,               {'Param1': 'value1', 'paRam2': 'value2'}, '/'),
-        ('user', '/about',                    None,               None,                                     '/about'),
-        ('user', '/about',                    '/ckan-admin',      None,                                     '/ckan-admin'),
-        ('user', None,                        '/ckan-admin',      None,                                     '/ckan-admin'),
-        ('user', '/',                         None,               None,                                     '/'),
-        ('user', '/user/logged_out_redirect', None,               None,                                     '/'),
-        ('user', '/',                         '/ckan-admin',      None,                                     '/ckan-admin'),
-        ('user', '/user/logged_out_redirect', '/ckan-admin',      None,                                     '/ckan-admin'),
-        ('user', 'http://google.es',          None,               None,                                     '/'),
-        ('user', 'http://google.es',          None,               None,                                     '/'),
-        ('user', 'http://' + HOST + '/about', None,               None,                                     'http://' + HOST + '/about'),
-        ('user', 'http://' + HOST + '/about', '/other_url',       None,                                     '/other_url'),
-        (None,   '/about',                    '/other',           None,                                     None),
-    ])
-    def test_abort(self, user='user', referer=None, came_from=None, headers=None, expected_location='/'):
-
-        # The abort function will check these variables
-        plugin.toolkit.c.user = user
-        plugin.toolkit.request.host = HOST
-        plugin.toolkit.request.headers = {}
-        plugin.toolkit.request.params = {}
-
-        if referer:
-            plugin.toolkit.request.headers['Referer'] = referer
-
-        if came_from:
-            plugin.toolkit.request.params['came_from'] = came_from
-
-        # Call the function
-        initial_status_code = 401
-        initial_detail = 'DETAIL'
-        initial_headers = None if not headers else headers.copy()
-        initial_comment = 'COMMENT'
-
-        # headers will be modified inside the function, but we should retain a copy (initial_headers)
-        status_code, detail, new_headers, comment = self._plugin.abort(initial_status_code, initial_detail, headers, initial_comment)
-
-        # Verifications
-        self.assertEquals(initial_detail, detail)
-        self.assertEquals(initial_comment, comment)
-
-        if user:
-            self.assertEquals(302, status_code)
-            self.assertEquals(new_headers['Location'], expected_location)
-        else:
-            self.assertEquals(initial_status_code, status_code)
-            self.assertEquals(initial_headers, new_headers)
-
-        # Check previous headers if they were not None
-        if initial_headers:
-            for header in initial_headers:
-                self.assertIn(header, new_headers)
-                self.assertEquals(initial_headers[header], new_headers[header])
