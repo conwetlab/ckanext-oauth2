@@ -20,7 +20,6 @@
 
 from __future__ import unicode_literals
 
-import constants
 import logging
 import oauth2
 import os
@@ -158,31 +157,6 @@ class OAuth2Plugin(plugins.SingletonPlugin):
         else:
             g.user = None
             log.warn('The user is not currently logged...')
-
-    def abort(self, status_code, detail, headers, comment):
-        log.debug('abort')
-
-        # If the user is authenticated, but they cannot access a protected resource, the system
-        # should redirect them to the previous page. If the user is not redirected, the system
-        # will try to reauthenticate the user generating a redirect loop:
-        # (authenticate -> user not allowed -> auto log out -> authenticate -> ...)
-        # If the user is not authenticated, the system should start the authentication process
-
-        if toolkit.c.user:  # USER IS AUTHENTICATED
-            # When the user is logged in, he/she should be redirected to the main page when
-            # the system cannot get the previous page
-            came_from_url = _get_previous_page('/')
-
-            # Init headers and set Location
-            if headers is None:
-                headers = {}
-            headers['Location'] = came_from_url
-
-            # 302 -> Found
-            return 302, detail, headers, comment
-        else:                # USER IS NOT AUTHENTICATED
-            # By not modifying the received parameters, the authentication process will start
-            return status_code, detail, headers, comment
 
     def get_auth_functions(self):
         # we need to prevent some actions being authorized.

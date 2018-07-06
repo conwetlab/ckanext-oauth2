@@ -165,10 +165,8 @@ class IntegrationTest(unittest.TestCase):
         self._log_in(self.base_url)
         driver.get(self.base_url + "ckan-admin")
 
-        # Check that the user has been redirected to the main page
-        WebDriverWait(driver, 10).until(lambda driver: driver.current_url == self.base_url)
         # Check that an error message is shown
-        assert driver.find_element_by_xpath("//div/div/div/div").text.startswith("Need to be system administrator to administer")
+        self.assertIn("Need to be system administrator to administer", self.driver.find_element_by_tag_name('body').text)
 
     def test_register_btn(self):
         driver = self.driver
