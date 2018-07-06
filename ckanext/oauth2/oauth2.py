@@ -23,7 +23,6 @@ from __future__ import unicode_literals
 
 import base64
 import ckan.model as model
-import constants
 import db
 import json
 import logging
@@ -31,12 +30,14 @@ from six.moves.urllib.parse import urljoin
 import os
 
 from base64 import b64encode, b64decode
-from ckan.lib import helpers as h
 from ckan.plugins import toolkit
 from oauthlib.oauth2 import InsecureTransportError
 import requests
 from requests_oauthlib import OAuth2Session
 import six
+
+import constants
+
 
 log = logging.getLogger(__name__)
 
@@ -93,7 +94,7 @@ class OAuth2Helper(object):
         auth_url, _ = oauth.authorization_url(self.authorization_endpoint)
         log.debug('Challenge: Redirecting challenge to page {0}'.format(auth_url))
         # CKAN 2.6 only supports bytes
-        return h.redirect_to(auth_url.encode('utf-8'))
+        return toolkit.redirect_to(auth_url.encode('utf-8'))
 
     def get_token(self):
         oauth = OAuth2Session(self.client_id, redirect_uri=self.redirect_uri, scope=self.scope)
