@@ -24,8 +24,9 @@ import ckanext.oauth2.plugin as plugin
 from mock import MagicMock, patch
 from parameterized import parameterized
 
-AUTHORIZATION_HEADER = 'custom_header'
-HOST = 'data.lab.fiware.org'
+CUSTOM_AUTHORIZATION_HEADER = 'x-auth-token'
+OAUTH2_AUTHORIZATION_HEADER = 'authorization'
+HOST = 'ckan.example.org'
 
 
 class PluginTest(unittest.TestCase):
@@ -35,7 +36,7 @@ class PluginTest(unittest.TestCase):
 
         self._toolkit = plugin.toolkit
         plugin.toolkit = MagicMock()
-        plugin.toolkit.config = {'ckan.oauth2.authorization_header': AUTHORIZATION_HEADER}
+        plugin.toolkit.config = {'ckan.oauth2.authorization_header': OAUTH2_AUTHORIZATION_HEADER}
 
         self._oauth2 = plugin.oauth2
         plugin.oauth2 = MagicMock()
@@ -110,17 +111,39 @@ class PluginTest(unittest.TestCase):
             self.assertEquals(False, function_result['success'])
 
     @parameterized.expand([
-        ({},                                None,                      None,  None),
-        ({},                                None,                      'test',  'test'),
-        ({AUTHORIZATION_HEADER: 'api_key'}, 'test',                    None,    'test'),
-        ({AUTHORIZATION_HEADER: 'api_key'}, 'test',                    'test2', 'test'),
-        ({AUTHORIZATION_HEADER: 'api_key'}, ValueError('Invalid Key'), 'test2', 'test2'),
-        ({AUTHORIZATION_HEADER: 'api_key'}, None,                      'test2', 'test2'),
-        ({'invalid_header': 'api_key'},     'test',                    None,    None),
-        ({'invalid_header': 'api_key'},     'test',                    'test2', 'test2'),
+        ({},                                              None,                      None,    None,    False),
+        ({},                                              None,                      None,    None,    True),
+
+        ({},                                              None,                      'test',  'test',  False),
+        ({},                                              None,                      'test',  'test',  True),
+
+        ({'invalid_header': 'api_key'},                   None,                      None,    None,    False),
+        ({'invalid_header': 'api_key'},                   None,                      'test2', 'test2', False),
+        ({'invalid_header': 'api_key'},                   None,                      None,    None,    True),
+        ({'invalid_header': 'api_key'},                   None,                      'test2', 'test2', True),
+
+        ({OAUTH2_AUTHORIZATION_HEADER: 'Bearer api_key'}, 'test',                    None,    'test',  True),
+        ({OAUTH2_AUTHORIZATION_HEADER: 'Bearer api_key'}, 'test',                    'test2', 'test',  True),
+        ({OAUTH2_AUTHORIZATION_HEADER: 'Bearer api_key'}, ValueError('Invalid Key'), 'test2', 'test2', True),
+        ({OAUTH2_AUTHORIZATION_HEADER: 'Bearer api_key'}, ValueError('Invalid Key'), None,    None,    True),
+        ({OAUTH2_AUTHORIZATION_HEADER: 'Bearer api_key'}, None,                      'test2', 'test2', True),
+        ({OAUTH2_AUTHORIZATION_HEADER: 'Otherr api_key'}, None,                      None,    None,    True),
+        ({OAUTH2_AUTHORIZATION_HEADER: 'api_key'},        None,                      'test2', 'test2', True),
+        ({OAUTH2_AUTHORIZATION_HEADER: 'api_key'},        None,                      None,    None,    True),
+
+        ({CUSTOM_AUTHORIZATION_HEADER: 'api_key'},        'test',                    None,    'test',  False),
+        ({CUSTOM_AUTHORIZATION_HEADER: 'api_key'},        'test',                    'test2', 'test',  False),
+        ({CUSTOM_AUTHORIZATION_HEADER: 'api_key'},        ValueError('Invalid Key'), 'test2', 'test2', False),
+        ({CUSTOM_AUTHORIZATION_HEADER: 'api_key'},        ValueError('Invalid Key'), None,    None,    False),
+        ({CUSTOM_AUTHORIZATION_HEADER: 'api_key'},        None,                      'test2', 'test2', False),
+
     ])
     @patch("ckanext.oauth2.plugin.g")
-    def test_identify(self, headers, authenticate_result, identity, expected_user, g_mock):
+    def test_identify(self, headers, authenticate_result, identity, expected_user, oauth2, g_mock):
+
+        if not oauth2:
+            plugin.toolkit.config = {'ckan.oauth2.authorization_header': CUSTOM_AUTHORIZATION_HEADER}
+            self._plugin.update_config(plugin.toolkit.config)
 
         self._set_identity(identity)
 
@@ -159,8 +182,11 @@ class PluginTest(unittest.TestCase):
         self._plugin.identify()
 
         # Check that the function "authenticate" (called when the API Key is included) has not been called
-        if headers and AUTHORIZATION_HEADER in headers:
-            self._plugin.oauth2helper.identify.assert_called_once_with({'access_token': headers[AUTHORIZATION_HEADER]})
+        if oauth2 and OAUTH2_AUTHORIZATION_HEADER in headers and headers[OAUTH2_AUTHORIZATION_HEADER].startswith('Bearer '):
+            token = headers[OAUTH2_AUTHORIZATION_HEADER].replace('Bearer ', '')
+            self._plugin.oauth2helper.identify.assert_called_once_with({'access_token': token})
+        elif not oauth2 and CUSTOM_AUTHORIZATION_HEADER in headers:
+            self._plugin.oauth2helper.identify.assert_called_once_with({'access_token': headers[CUSTOM_AUTHORIZATION_HEADER]})
         else:
             self.assertEquals(0, self._plugin.oauth2helper.identify.call_count)
 

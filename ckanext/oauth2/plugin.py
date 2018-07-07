@@ -135,6 +135,12 @@ class OAuth2Plugin(plugins.SingletonPlugin):
         apikey = toolkit.request.headers.get(self.authorization_header, '')
         user_name = None
 
+        if self.authorization_header == "authorization":
+            if apikey.startswith('Bearer '):
+                apikey = apikey[7:].strip()
+            else:
+                apikey = ''
+
         # This API Key is not the one of CKAN, it's the one provided by the OAuth2 Service
         if apikey:
             try:
