@@ -80,10 +80,9 @@ class OAuth2Helper(object):
         # Init db
         db.init_db(model)
 
-        if self.authorization_endpoint == "" or self.token_endpoint == "" or self.client_id == "" or self.client_secret == "" \
-                or self.profile_api_url == "" or self.profile_api_user_field == "" or self.profile_api_mail_field == "":
-            raise ValueError('authorization_endpoint, token_endpoint, client_id, client_secret, '
-                             'profile_api_url, profile_api_user_field and profile_api_mail_field are required')
+        missing = [key for key in REQUIRED_CONF if getattr(self, key, "") == ""]
+        if missing:
+            raise ValueError("Missing required oauth2 conf: %s" % ", ".join(missing))
         elif self.scope == "":
             self.scope = None
 
