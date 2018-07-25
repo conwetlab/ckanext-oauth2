@@ -38,10 +38,13 @@ config.api = {
 }
 
 // Enable authzforce
-config.authzforce = {
-	enabled: false,
-	host: '',
-	port: 8080
+config.authorization = {
+    level: 'basic',
+    authzforce: {
+        enabled: false,
+        host: '',
+        port: 8080
+    }
 }
 
 var database_host = (process.env.DATABASE_HOST) ? process.env.DATABASE_HOST : 'localhost'
@@ -85,5 +88,13 @@ config.site = {
     title: 'Identity Manager',
     theme: 'default'
 };
+
+// Config eIDAs Authentication
+config.eidas = {
+    enabled: false,
+    gateway_host: 'localhost',
+    idp_host: 'https://se-eidas.redsara.es/EidasNode/ServiceProvider',
+    metadata_expiration: 60 * 60 * 24 * 365 // One year
+}
 
 module.exports = config;
