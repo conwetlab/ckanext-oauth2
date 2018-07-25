@@ -102,10 +102,14 @@ class OAuth2Helper(object):
         headers = {
             'Accept': 'application/json',
             'Content-Type': 'application/x-www-form-urlencoded',
-            'Authorization': 'Basic %s' % base64.urlsafe_b64encode(
+        }
+
+        if self.legacy_idm:
+            # This is only required for Keyrock v6 and v5
+            headers['Authorization'] = 'Basic %s' % base64.urlsafe_b64encode(
                 '%s:%s' % (self.client_id, self.client_secret)
             )
-        }
+
         try:
             token = oauth.fetch_token(self.token_endpoint,
                                       headers=headers,
