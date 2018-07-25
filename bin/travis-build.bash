@@ -2,6 +2,25 @@
 
 set -e
 
+function test_connection {
+    echo "Testing $1 connection"
+
+    attempt_counter=0
+    max_attempts=50
+
+    until $(curl --output /dev/null --silent --head --fail --insecure $2); do
+        if [ ${attempt_counter} -eq ${max_attempts} ];then
+            echo "Max attempts reached"
+            exit 1
+        fi
+
+        attempt_counter=$(($attempt_counter+1))
+        sleep 5
+    done
+
+    echo "$1 connection, OK"
+}
+
 echo "This is travis-build.bash..."
 
 echo "Installing the packages that CKAN requires..."
@@ -58,7 +77,7 @@ if [ "$INTEGRATION_TEST" = "true" ]; then
     docker run -d -p 443:443 --network main -e DATABASE_HOST=mysql -v "${TRAVIS_BUILD_DIR}/ci/idm-config.js:/opt/fiware-idm/config.js:ro" -v /etc/ssl/self_signed.key:/opt/fiware-idm/certs/self_signed.key:ro -v /usr/local/share/ca-certificates/self_signed.crt:/opt/fiware-idm/certs/self_signed.crt:ro --name idm fiware/idm
 
     # Wait until idm is ready
-    sleep 30
+    test_connection 'KeyRock' https://localhost:443
 fi
 
 echo "travis-build.bash is done."
