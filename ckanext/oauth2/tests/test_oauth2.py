@@ -20,7 +20,7 @@
 
 from __future__ import print_function, unicode_literals
 
-from base64 import b64encode
+from base64 import b64encode, urlsafe_b64encode
 import json
 import os
 import unittest
@@ -136,11 +136,12 @@ class OAuth2PluginTest(unittest.TestCase):
         with self.assertRaises(MissingCodeError):
             helper.get_token()
 
-    @httpretty.activate
-    def test_get_token(self):
+    @patch('ckanext.oauth2.oauth2.OAuth2Session')
+    @patch.dict(os.environ, {'OAUTHLIB_INSECURE_TRANSPORT': ''})
+    def test_get_token(self, OAuth2Session):
         helper = self._helper()
         token = OAUTH2TOKEN
-        httpretty.register_uri(httpretty.POST, helper.token_endpoint, body=json.dumps(token))
+        OAuth2Session().fetch_token.return_value = OAUTH2TOKEN
 
         state = b64encode(json.dumps({'came_from': 'initial-page'}))
         oauth2.toolkit.request = make_request(True, 'data.com', 'callback', {'state': state, 'code': 'code'})
@@ -149,6 +150,34 @@ class OAuth2PluginTest(unittest.TestCase):
         for key in token:
             self.assertIn(key, retrieved_token)
             self.assertEquals(token[key], retrieved_token[key])
+
+    @patch('ckanext.oauth2.oauth2.OAuth2Session')
+    def test_get_token_legacy_idm(self, OAuth2Session):
+        helper = self._helper()
+        helper.legacy_idm = True
+        helper.verify_https = True
+        OAuth2Session().fetch_token.return_value = OAUTH2TOKEN
+
+        state = b64encode(json.dumps({'came_from': 'initial-page'}))
+        oauth2.toolkit.request = make_request(True, 'data.com', 'callback', {'state': state, 'code': 'code'})
+        retrieved_token = helper.get_token()
+
+        expected_headers = {
+            'Accept': 'application/json',
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': 'Basic %s' % urlsafe_b64encode(
+                '%s:%s' % (helper.client_id, helper.client_secret)
+            )
+        }
+
+        OAuth2Session().fetch_token.assert_called_once_with(
+            helper.token_endpoint,
+            headers=expected_headers,
+            client_secret=helper.client_secret,
+            authorization_response=oauth2.toolkit.request.url,
+            verify=True
+        )
+        self.assertEqual(retrieved_token, OAUTH2TOKEN)
 
     @httpretty.activate
     @patch.dict(os.environ, {'OAUTHLIB_INSECURE_TRANSPORT': ''})
