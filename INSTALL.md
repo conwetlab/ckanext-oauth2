@@ -87,3 +87,6 @@ export OAUTHLIB_INSECURE_TRANSPORT=True
 ```
 * The callback URL that you should set on your OAuth 2.0 is: `https://YOUR_CKAN_INSTANCE/oauth2/callback`, replacing `YOUR_CKAN_INSTANCE` by the machine and port where your CKAN instance is running.
 * If you are connecting to FIWARE KeyRock v6 or v5, you have to set `ckan.oauth2.legacy_idm` to `true`.
+
+Refer to this document for integration between CKAN and WSO2-IS IDM using oauth2 with settings:
+https://github.com/conwetlab/ckanext-oauth2/wiki/Integration-between-WSO2-IS-and-CKAN-using-Oauth2
