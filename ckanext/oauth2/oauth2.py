@@ -63,7 +63,7 @@ class OAuth2Helper(object):
         if self.verify_https and os.environ.get("REQUESTS_CA_BUNDLE", "").strip() != "":
             self.verify_https = os.environ["REQUESTS_CA_BUNDLE"].strip()
 
-        self.jwt_enable = six.text_type(os.environ.get('CKAN_OAUTH2_JWT_ENABLE', toolkit.config.get('ckan.oauth2.jwt.enable',''))).strip()
+        self.jwt_enable = six.text_type(os.environ.get('CKAN_OAUTH2_JWT_ENABLE', toolkit.config.get('ckan.oauth2.jwt.enable',''))).strip().lower() in ("true", "1", "on")
 
         self.legacy_idm = six.text_type(os.environ.get('CKAN_OAUTH2_LEGACY_IDM', toolkit.config.get('ckan.oauth2.legacy_idm', ''))).strip().lower() in ("true", "1", "on")
         self.authorization_endpoint = six.text_type(os.environ.get('CKAN_OAUTH2_AUTHORIZATION_ENDPOINT', toolkit.config.get('ckan.oauth2.authorization_endpoint', ''))).strip()
@@ -131,7 +131,7 @@ class OAuth2Helper(object):
 
     def identify(self, token):
 
-        if self.jwt_enable.__eq__(u'enable') or self.scope.__eq__(u'jwt'):
+        if self.jwt_enable:
 
             access_token = bytes(token['access_token'])
             user_data = jwt.decode(access_token, verify=False)
@@ -199,8 +199,6 @@ class OAuth2Helper(object):
 
         return user
 
-
-
     def _get_rememberer(self, environ):
         plugins = environ.get('repoze.who.plugins', {})
         return plugins.get(self.rememberer_name)
@@ -237,6 +235,7 @@ class OAuth2Helper(object):
             }
 
     def update_token(self, user_name, token):
+
         user_token = db.UserToken.by_user_name(user_name=user_name)
         # Create the user if it does not exist
         if not user_token:
@@ -246,7 +245,12 @@ class OAuth2Helper(object):
         user_token.access_token = token['access_token']
         user_token.token_type = token['token_type']
         user_token.refresh_token = token.get('refresh_token')
-        user_token.expires_in = token['expires_in']
+        if 'expires_in' in token:
+            user_token.expires_in = token['expires_in']
+        else:
+            access_token = jwt.decode(user_token.access_token, verify=False)
+            user_token.expires_in = access_token['exp'] - access_token['iat']
+
         model.Session.add(user_token)
         model.Session.commit()
 
