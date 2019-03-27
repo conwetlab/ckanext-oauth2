@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="90989582-d045-491d-a280-1680da3a82bd" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ckanext/oauth2/oauth2.py" beforeDir="false" afterPath="$PROJECT_DIR$/ckanext/oauth2/oauth2.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/requirements/install.pip" beforeDir="false" afterPath="$PROJECT_DIR$/requirements/install.pip" afterDir="false" />
     </list>
@@ -168,7 +169,7 @@
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
     <property name="nodejs_npm_path_reset_for_default_project" value="true" />
-    <property name="settings.editor.selected.configurable" value="configurable.group.tools" />
+    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RunDashboard">
     <option name="ruleStates">
@@ -195,12 +196,12 @@
       <workItem from="1553509687633" duration="1455000" />
       <workItem from="1553521993610" duration="1702000" />
       <workItem from="1553523708638" duration="14898000" />
-      <workItem from="1553550736977" duration="33402000" />
+      <workItem from="1553550736977" duration="34028000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="51457000" />
+    <option name="totallyTimeSpent" value="52083000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -213,7 +214,6 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="134" y="35" width="3066" height="1765" extended-state="6" />
-    <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" sideWeight="0.49861112" visible="true" weight="0.15782404" />
       <window_info id="Structure" order="1" sideWeight="0.5013889" side_tool="true" weight="0.1047683" />
@@ -229,7 +229,7 @@
       <window_info anchor="bottom" id="Version Control" order="8" weight="0.5196798" />
       <window_info anchor="bottom" id="Database Changes" order="9" />
       <window_info anchor="bottom" id="Event Log" order="10" sideWeight="0.5003358" side_tool="true" weight="0.32955304" />
-      <window_info anchor="bottom" id="Terminal" order="11" sideWeight="0.49966422" weight="0.9299533" />
+      <window_info active="true" anchor="bottom" id="Terminal" order="11" sideWeight="0.49966422" visible="true" weight="0.9299533" />
       <window_info anchor="bottom" id="Python Console" order="12" weight="0.32946634" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
