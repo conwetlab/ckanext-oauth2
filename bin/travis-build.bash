@@ -64,7 +64,7 @@ echo "Installing ckanext-oauth2 and its requirements..."
 python setup.py develop
 
 if [ "$INTEGRATION_TEST" = "true" ]; then
-    if ["$IDM_VERSION" = "v6"]; then
+    if [ "$IDM_VERSION" = "v6" ]; then
         sudo sh -c 'echo "\n[ SAN ]\nsubjectAltName=DNS:localhost" >> /etc/ssl/openssl.cnf'
         sudo openssl req -new -newkey rsa:2048 -days 3650 -nodes -x509 \
             -subj '/O=API Umbrella/CN=localhost' \
