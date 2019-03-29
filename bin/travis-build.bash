@@ -64,20 +64,22 @@ echo "Installing ckanext-oauth2 and its requirements..."
 python setup.py develop
 
 if [ "$INTEGRATION_TEST" = "true" ]; then
-    sudo sh -c 'echo "\n[ SAN ]\nsubjectAltName=DNS:localhost" >> /etc/ssl/openssl.cnf'
-    sudo openssl req -new -newkey rsa:2048 -days 3650 -nodes -x509 \
-        -subj '/O=API Umbrella/CN=localhost' \
-        -keyout /etc/ssl/self_signed.key -out /usr/local/share/ca-certificates/self_signed.crt \
-        -reqexts SAN -extensions SAN
+    if ["$IDM_VERSION" = "v6"]; then
+        sudo sh -c 'echo "\n[ SAN ]\nsubjectAltName=DNS:localhost" >> /etc/ssl/openssl.cnf'
+        sudo openssl req -new -newkey rsa:2048 -days 3650 -nodes -x509 \
+            -subj '/O=API Umbrella/CN=localhost' \
+            -keyout /etc/ssl/self_signed.key -out /usr/local/share/ca-certificates/self_signed.crt \
+            -reqexts SAN -extensions SAN
 
-    sudo update-ca-certificates
-    export REQUESTS_CA_BUNDLE="/etc/ssl/certs/ca-certificates.crt"
-    docker network create main
-    docker run -d --network main -e MYSQL_ROOT_PASSWORD=idm -e MYSQL_ROOT_HOST=% --name mysql mysql/mysql-server:5.7.21
-    docker run -d -p 3000:3000 --network main -e DATABASE_HOST=mysql -v "${TRAVIS_BUILD_DIR}/ci/idm-config.js:/opt/fiware-idm/config.js:ro" -v /etc/ssl/self_signed.key:/opt/fiware-idm/certs/self_signed.key:ro -v /usr/local/share/ca-certificates/self_signed.crt:/opt/fiware-idm/certs/self_signed.crt:ro --name idm fiware/idm
+        sudo update-ca-certificates
+        export REQUESTS_CA_BUNDLE="/etc/ssl/certs/ca-certificates.crt"
+        docker network create main
+        docker run -d --network main -e MYSQL_ROOT_PASSWORD=idm -e MYSQL_ROOT_HOST=% --name mysql mysql/mysql-server:5.7.21
+        docker run -d -p 443:443 --network main -e DATABASE_HOST=mysql -v "${TRAVIS_BUILD_DIR}/ci/idm-config.js:/opt/fiware-idm/config.js:ro" -v /etc/ssl/self_signed.key:/opt/fiware-idm/certs/self_signed.key:ro -v /usr/local/share/ca-certificates/self_signed.crt:/opt/fiware-idm/certs/self_signed.crt:ro --name idm fiware/idm:v5.4.0
 
-    # Wait until idm is ready
-    test_connection 'KeyRock' http://localhost:3000
+        # Wait until idm is ready
+        test_connection 'KeyRock' https://localhost:443
+    fi
 fi
 
 echo "travis-build.bash is done."
