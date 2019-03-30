@@ -35,7 +35,7 @@ python setup.py develop
 
 sed -i "s|psycopg2==2.4.5|psycopg2==2.7.1|g" requirements.txt
 
-pip install -r requirements/all.pip --allow-all-external
+pip install -r requirements.txt --allow-all-external
 pip install -r dev-requirements.txt --allow-all-external
 cd -
 
@@ -53,7 +53,6 @@ sudo -u postgres psql -c "CREATE USER ckan_default WITH PASSWORD 'pass';"
 sudo -u postgres psql -c "CREATE USER datastore_default WITH PASSWORD 'pass';"
 sudo -u postgres psql -c "CREATE DATABASE ckan_test WITH OWNER ckan_default;"
 sudo -u postgres psql -c "CREATE DATABASE datastore_test WITH OWNER ckan_default;"
-
 
 echo "Initialising the database..."
 cd ckan

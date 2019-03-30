@@ -1,10 +1,12 @@
-#!/home/nikta/PycharmProjects/ckanext-oauth2/venv/bin/python
-# -*- coding: utf-8 -*-
+#!/home/nikta/PycharmProjects/ckanext-oauth2/venv/bin/python2.7
+# EASY-INSTALL-ENTRY-SCRIPT: 'nose==1.3.7','console_scripts','nosetests-2.7'
+__requires__ = 'nose==1.3.7'
 import re
 import sys
-
-from nose import run_exit
+from pkg_resources import load_entry_point
 
 if __name__ == '__main__':
     sys.argv[0] = re.sub(r'(-script\.pyw?|\.exe)?$', '', sys.argv[0])
-    sys.exit(run_exit())
+    sys.exit(
+        load_entry_point('nose==1.3.7', 'console_scripts', 'nosetests-2.7')()
+    )
