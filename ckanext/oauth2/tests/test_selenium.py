@@ -34,7 +34,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 
-IDM_URL = "https://localhost"
+IDM_URL = "http://localhost:3000"
 FILAB2_MAIL = "admin@test.com"
 FILAB_PASSWORD = "1234"
 PASS_INTEGRATION_TESTS = os.environ.get("INTEGRATION_TEST", "").strip().lower() in ('1', 'true', 'on')
@@ -58,6 +58,7 @@ class IntegrationTest(unittest.TestCase):
         }
         url = urljoin(IDM_URL, AUTH_TOKEN_ENDPOINT)
         response = requests.post(url, json=body)
+        print(response.text)
 
         token = response.headers["X-Subject-Token"]
 

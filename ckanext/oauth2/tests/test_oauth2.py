@@ -241,7 +241,7 @@ class OAuth2PluginTest(unittest.TestCase):
     def test_get_token_error(self):
         helper = self._helper()
         token = {
-            'error': 'auth_error',
+            'info': 'auth_error',
             'error_description': 'Some description'
         }
         httpretty.register_uri(httpretty.POST, helper.token_endpoint, body=json.dumps(token))

@@ -1,0 +1,29 @@
+version: "2"
+networks:
+   main:
+    external: true
+
+services:
+    mysql:
+      image: mysql:5.7
+      networks:
+        main:
+          aliases:
+            - mysql.idm.docker
+      environment:
+        - MYSQL_ROOT_PASSWORD=idm
+
+    fiware-idm:
+      image: fiware/idm:7.6.0
+      ports:
+        - "3000:3000"
+        - "443:443"
+      networks:
+        main:
+         aliases:
+           - idm.docker
+      #volumes:
+      #  - /etc/ssl/self_signed.key:/opt/fiware-idm/certs/self_signed.key:ro
+      #  - /usr/local/share/ca-certificates/self_signed.crt:/opt/fiware-idm/certs/self_signed.crt:ro
+      environment:
+        - IDM_DB_HOST=mysql.idm.docker
