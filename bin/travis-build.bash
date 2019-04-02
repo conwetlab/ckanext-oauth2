@@ -77,6 +77,7 @@ if [ "$INTEGRATION_TEST" = "true" ]; then
         cd ${TRAVIS_BUILD_DIR}/ci
 
         docker-compose up -d
+        cd ..
 
         # Wait until idm is ready
         test_connection 'KeyRock' http://localhost:3000
