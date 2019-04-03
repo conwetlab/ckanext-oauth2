@@ -111,7 +111,7 @@ class OAuth2PluginTest(unittest.TestCase):
             helper.profile_api_fullname_field = self._fullname_field
 
         if jwt_enable:
-            helper.profile_jwt_enable = True
+            helper.jwt_enable = True
 
         return helper
 

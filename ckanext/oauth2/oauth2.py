@@ -37,7 +37,6 @@ from requests_oauthlib import OAuth2Session
 import six
 
 import jwt
-import ipdb
 
 import constants
 
@@ -132,7 +131,6 @@ class OAuth2Helper(object):
 
     def identify(self, token):
 
-        ipdb.set_trace()
         if self.jwt_enable:
 
             access_token = bytes(token['access_token'])
