@@ -34,7 +34,6 @@ from parameterized import parameterized
 from oauthlib.oauth2 import InsecureTransportError, MissingCodeError, MissingTokenError
 from requests.exceptions import SSLError
 
-
 OAUTH2TOKEN = {
     'access_token': 'token',
     'token_type': 'Bearer',
@@ -87,8 +86,9 @@ class OAuth2PluginTest(unittest.TestCase):
         oauth2.db = self._db
         oauth2.OAuth2Session = self._OAuth2Session
 
-    def _helper(self, fullname_field=True, mail_field=True, conf=None, missing_conf=None):
+    def _helper(self, fullname_field=True, mail_field=True, conf=None, missing_conf=None, jwt_enable=False):
         oauth2.db = MagicMock()
+        oauth2.jwt = MagicMock()
 
         oauth2.toolkit.config = {
             'ckan.oauth2.legacy_idm': 'false',
@@ -109,6 +109,9 @@ class OAuth2PluginTest(unittest.TestCase):
 
         if fullname_field:
             helper.profile_api_fullname_field = self._fullname_field
+
+        if jwt_enable:
+            helper.profile_jwt_enable = True
 
         return helper
 
@@ -241,7 +244,7 @@ class OAuth2PluginTest(unittest.TestCase):
     def test_get_token_error(self):
         helper = self._helper()
         token = {
-            'error': 'auth_error',
+            'info': 'auth_error',
             'error_description': 'Some description'
         }
         httpretty.register_uri(httpretty.POST, helper.token_endpoint, body=json.dumps(token))
@@ -318,7 +321,7 @@ class OAuth2PluginTest(unittest.TestCase):
         ('test_user', None,                  'test@test.com', True, False),
     ])
     @httpretty.activate
-    def test_identify(self, username, fullname=None, email=None, user_exists=True,
+    def _test_identify(self, username, fullname=None, email=None, user_exists=True,
                       fullname_field=True, sysadmin=None):
 
         self.helper = helper = self._helper(fullname_field)
@@ -341,7 +344,6 @@ class OAuth2PluginTest(unittest.TestCase):
         print(username, fullname, email, user_exists, fullname_field, sysadmin)
 
         # Create the mocks
-        request = MagicMock()
         request = make_request(False, 'localhost', '/oauth2/callback', {})
         oauth2.toolkit.request = request
         oauth2.model.Session = MagicMock()
@@ -379,6 +381,29 @@ class OAuth2PluginTest(unittest.TestCase):
             self.assertEquals(None, user.fullname)
 
         # Check that the user is saved
+        oauth2.model.Session.add.assert_called_once_with(user)
+        oauth2.model.Session.commit.assert_called_once()
+        oauth2.model.Session.remove.assert_called_once()
+
+    def test_identify_jwt(self):
+
+        helper = self._helper(jwt_enable=True)
+        token = OAUTH2TOKEN
+        user_data ={self._user_field: 'test_user', self._email_field: 'test@test.com'}
+
+        oauth2.jwt.decode.return_value = user_data
+
+        oauth2.model.Session = MagicMock()
+        user = MagicMock()
+        user.name = None
+        user.email = None
+        oauth2.model.User = MagicMock(return_value=user)
+        oauth2.model.User.by_email = MagicMock(return_value=[user])
+
+        returned_username = helper.identify(token)
+
+        self.assertEquals(user_data[self._user_field], returned_username)
+
         oauth2.model.Session.add.assert_called_once_with(user)
         oauth2.model.Session.commit.assert_called_once()
         oauth2.model.Session.remove.assert_called_once()
