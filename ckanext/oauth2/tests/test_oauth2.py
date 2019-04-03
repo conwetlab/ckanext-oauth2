@@ -321,7 +321,7 @@ class OAuth2PluginTest(unittest.TestCase):
         ('test_user', None,                  'test@test.com', True, False),
     ])
     @httpretty.activate
-    def _test_identify(self, username, fullname=None, email=None, user_exists=True,
+    def test_identify(self, username, fullname=None, email=None, user_exists=True,
                       fullname_field=True, sysadmin=None):
 
         self.helper = helper = self._helper(fullname_field)
