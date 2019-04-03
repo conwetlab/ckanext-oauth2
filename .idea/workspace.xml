@@ -2,9 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="90989582-d045-491d-a280-1680da3a82bd" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ckanext/oauth2/oauth2.py" beforeDir="false" afterPath="$PROJECT_DIR$/ckanext/oauth2/oauth2.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ckanext/oauth2/tests/test_oauth2.py" beforeDir="false" afterPath="$PROJECT_DIR$/ckanext/oauth2/tests/test_oauth2.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bin/travis-build.bash" beforeDir="false" afterPath="$PROJECT_DIR$/bin/travis-build.bash" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/coverage.xml" beforeDir="false" afterPath="$PROJECT_DIR$/coverage.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/test-fiware.ini" beforeDir="false" afterPath="$PROJECT_DIR$/test-fiware.ini" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/test.ini" beforeDir="false" afterPath="$PROJECT_DIR$/test.ini" afterDir="false" />
@@ -42,11 +40,11 @@
               </provider>
             </entry>
           </file>
-          <file pinned="false" current-in-tab="false">
+          <file pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/bin/travis-build.bash">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="1125">
-                  <caret line="75" selection-start-line="75" selection-end-line="75" />
+                <state relative-caret-position="210">
+                  <caret line="38" column="56" selection-start-line="38" selection-start-column="56" selection-end-line="38" selection-end-column="56" />
                 </state>
               </provider>
             </entry>
@@ -54,8 +52,8 @@
           <file pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/ckanext/oauth2/tests/test_oauth2.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="296">
-                  <caret line="112" column="19" selection-start-line="112" selection-start-column="19" selection-end-line="112" selection-end-column="19" />
+                <state relative-caret-position="6330">
+                  <caret line="422" column="31" selection-start-line="422" selection-start-column="31" selection-end-line="422" selection-end-column="31" />
                   <folding>
                     <element signature="e#901#956#0" expanded="true" />
                   </folding>
@@ -80,17 +78,17 @@
           <file pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/test.ini">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="30">
-                  <caret line="14" column="1" selection-start-line="14" selection-start-column="1" selection-end-line="14" selection-end-column="1" />
+                <state relative-caret-position="45">
+                  <caret line="15" column="1" selection-start-line="15" selection-start-column="1" selection-end-line="15" selection-end-column="1" />
                 </state>
               </provider>
             </entry>
           </file>
-          <file pinned="false" current-in-tab="true">
+          <file pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/test-fiware.ini">
               <provider selected="true" editor-type-id="text-editor">
                 <state relative-caret-position="210">
-                  <caret line="14" column="1" selection-start-line="14" selection-start-column="1" selection-end-line="14" selection-end-column="1" />
+                  <caret line="14" selection-start-line="14" selection-end-line="14" />
                 </state>
               </provider>
             </entry>
@@ -111,7 +109,7 @@
           <file pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/ckanext/oauth2/oauth2.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="-2647">
+                <state relative-caret-position="96">
                   <caret line="38" column="10" selection-start-line="38" selection-start-column="10" selection-end-line="38" selection-end-column="10" />
                 </state>
               </provider>
@@ -139,12 +137,12 @@
         <option value="$PROJECT_DIR$/requirements/install.pip" />
         <option value="$PROJECT_DIR$/setup.cfg" />
         <option value="$PROJECT_DIR$/setup.py" />
-        <option value="$PROJECT_DIR$/bin/travis-build.bash" />
         <option value="$USER_HOME$/ckan/etc/default/development.ini" />
         <option value="$PROJECT_DIR$/ckanext/oauth2/oauth2.py" />
-        <option value="$PROJECT_DIR$/ckanext/oauth2/tests/test_oauth2.py" />
         <option value="$PROJECT_DIR$/test.ini" />
         <option value="$PROJECT_DIR$/test-fiware.ini" />
+        <option value="$PROJECT_DIR$/ckanext/oauth2/tests/test_oauth2.py" />
+        <option value="$PROJECT_DIR$/bin/travis-build.bash" />
       </list>
     </option>
   </component>
@@ -255,7 +253,7 @@
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="82852000" />
+    <option name="totallyTimeSpent" value="84178000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -270,7 +268,7 @@
     <frame x="1920" y="-2" width="1920" height="1017" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.49861112" visible="true" weight="0.17022412" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" sideWeight="0.49861112" visible="true" weight="0.17022412" />
       <window_info id="Structure" order="1" sideWeight="0.5013889" side_tool="true" weight="0.1047683" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
@@ -284,7 +282,7 @@
       <window_info anchor="bottom" id="Version Control" order="8" weight="0.5181208" />
       <window_info anchor="bottom" id="Database Changes" order="9" />
       <window_info anchor="bottom" id="Event Log" order="10" sideWeight="0.5003358" side_tool="true" weight="0.32900432" />
-      <window_info active="true" anchor="bottom" id="Terminal" order="11" sideWeight="0.49966422" visible="true" weight="0.5247748" />
+      <window_info anchor="bottom" id="Terminal" order="11" sideWeight="0.49966422" visible="true" weight="0.4572072" />
       <window_info anchor="bottom" id="Python Console" order="12" weight="0.32900432" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
@@ -477,13 +475,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/bin/travis-build.bash">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1125">
-          <caret line="75" selection-start-line="75" selection-end-line="75" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/ckanext/oauth2/db.py">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
@@ -508,27 +499,34 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/ckanext/oauth2/tests/test_oauth2.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="296">
-          <caret line="112" column="19" selection-start-line="112" selection-start-column="19" selection-end-line="112" selection-end-column="19" />
-          <folding>
-            <element signature="e#901#956#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/test.ini">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="30">
-          <caret line="14" column="1" selection-start-line="14" selection-start-column="1" selection-end-line="14" selection-end-column="1" />
+        <state relative-caret-position="45">
+          <caret line="15" column="1" selection-start-line="15" selection-start-column="1" selection-end-line="15" selection-end-column="1" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/test-fiware.ini">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="210">
-          <caret line="14" column="1" selection-start-line="14" selection-start-column="1" selection-end-line="14" selection-end-column="1" />
+          <caret line="14" selection-start-line="14" selection-end-line="14" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/ckanext/oauth2/tests/test_oauth2.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="6330">
+          <caret line="422" column="31" selection-start-line="422" selection-start-column="31" selection-end-line="422" selection-end-column="31" />
+          <folding>
+            <element signature="e#901#956#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/bin/travis-build.bash">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="210">
+          <caret line="38" column="56" selection-start-line="38" selection-start-column="56" selection-end-line="38" selection-end-column="56" />
         </state>
       </provider>
     </entry>
