@@ -34,7 +34,6 @@ from parameterized import parameterized
 from oauthlib.oauth2 import InsecureTransportError, MissingCodeError, MissingTokenError
 from requests.exceptions import SSLError
 
-
 OAUTH2TOKEN = {
     'access_token': 'token',
     'token_type': 'Bearer',
@@ -87,8 +86,9 @@ class OAuth2PluginTest(unittest.TestCase):
         oauth2.db = self._db
         oauth2.OAuth2Session = self._OAuth2Session
 
-    def _helper(self, fullname_field=True, mail_field=True, conf=None, missing_conf=None):
+    def _helper(self, fullname_field=True, mail_field=True, conf=None, missing_conf=None, jwt_enable=False):
         oauth2.db = MagicMock()
+        oauth2.jwt = MagicMock()
 
         oauth2.toolkit.config = {
             'ckan.oauth2.legacy_idm': 'false',
@@ -109,6 +109,9 @@ class OAuth2PluginTest(unittest.TestCase):
 
         if fullname_field:
             helper.profile_api_fullname_field = self._fullname_field
+
+        if jwt_enable:
+            helper.jwt_enable = True
 
         return helper
 
@@ -341,7 +344,6 @@ class OAuth2PluginTest(unittest.TestCase):
         print(username, fullname, email, user_exists, fullname_field, sysadmin)
 
         # Create the mocks
-        request = MagicMock()
         request = make_request(False, 'localhost', '/oauth2/callback', {})
         oauth2.toolkit.request = request
         oauth2.model.Session = MagicMock()
@@ -379,6 +381,29 @@ class OAuth2PluginTest(unittest.TestCase):
             self.assertEquals(None, user.fullname)
 
         # Check that the user is saved
+        oauth2.model.Session.add.assert_called_once_with(user)
+        oauth2.model.Session.commit.assert_called_once()
+        oauth2.model.Session.remove.assert_called_once()
+
+    def test_identify_jwt(self):
+
+        helper = self._helper(jwt_enable=True)
+        token = OAUTH2TOKEN
+        user_data ={self._user_field: 'test_user', self._email_field: 'test@test.com'}
+
+        oauth2.jwt.decode.return_value = user_data
+
+        oauth2.model.Session = MagicMock()
+        user = MagicMock()
+        user.name = None
+        user.email = None
+        oauth2.model.User = MagicMock(return_value=user)
+        oauth2.model.User.by_email = MagicMock(return_value=[user])
+
+        returned_username = helper.identify(token)
+
+        self.assertEquals(user_data[self._user_field], returned_username)
+
         oauth2.model.Session.add.assert_called_once_with(user)
         oauth2.model.Session.commit.assert_called_once()
         oauth2.model.Session.remove.assert_called_once()
@@ -472,10 +497,12 @@ class OAuth2PluginTest(unittest.TestCase):
         self.assertEquals(came_from, oauth2.toolkit.response.location)
 
     @parameterized.expand([
-        (True,),
-        (False,)
+        (True, True),
+        (True, False),
+        (False, False),
+        (False, True),
     ])
-    def test_update_token(self, user_exists):
+    def test_update_token(self, user_exists, jwt_expires_in):
         helper = self._helper()
         user = 'user'
 
@@ -494,26 +521,48 @@ class OAuth2PluginTest(unittest.TestCase):
         oauth2.db.UserToken.by_user_name = MagicMock(return_value=usertoken)
 
         # The token to be updated
-        newtoken = {
-            'access_token': 'new_access_token',
-            'token_type': 'new_token_type',
-            'expires_in': 'new_expires_in',
-            'refresh_token': 'new_refresh_token'
-        }
+        if jwt_expires_in:
+            newtoken = {
+                'access_token': 'new_access_token',
+                'token_type': 'new_token_type',
+                'expires_in': 'new_expires_in',
+                'refresh_token': 'new_refresh_token'
+            }
+            helper.update_token('user', newtoken)
 
-        helper.update_token('user', newtoken)
+            # Check that the object has been stored
+            oauth2.model.Session.add.assert_called_once()
+            oauth2.model.Session.commit.assert_called_once()
 
-        # Check that the object has been stored
-        oauth2.model.Session.add.assert_called_once()
-        oauth2.model.Session.commit.assert_called_once()
+            # Check that the object contains the correct information
+            tk = oauth2.model.Session.add.call_args_list[0][0][0]
+            self.assertEquals(user, tk.user_name)
+            self.assertEquals(newtoken['access_token'], tk.access_token)
+            self.assertEquals(newtoken['token_type'], tk.token_type)
+            self.assertEquals(newtoken['expires_in'], tk.expires_in)
+            self.assertEquals(newtoken['refresh_token'], tk.refresh_token)
+        else:
+            newtoken = {
+                'access_token': 'new_access_token',
+                'token_type': 'new_token_type',
+                'refresh_token': 'new_refresh_token'
+            }
+            expires_in_data = {'exp': 3600, 'iat': 0}
+            oauth2.jwt.decode.return_value = expires_in_data
+            helper.update_token('user', newtoken)
 
-        # Check that the object contains the correct information
-        tk = oauth2.model.Session.add.call_args_list[0][0][0]
-        self.assertEquals(user, tk.user_name)
-        self.assertEquals(newtoken['access_token'], tk.access_token)
-        self.assertEquals(newtoken['token_type'], tk.token_type)
-        self.assertEquals(newtoken['expires_in'], tk.expires_in)
-        self.assertEquals(newtoken['refresh_token'], tk.refresh_token)
+            # Check that the object has been stored
+            oauth2.model.Session.add.assert_called_once()
+            oauth2.model.Session.commit.assert_called_once()
+
+            # Check that the object contains the correct information
+            tk = oauth2.model.Session.add.call_args_list[0][0][0]
+            self.assertEquals(user, tk.user_name)
+            self.assertEquals(newtoken['access_token'], tk.access_token)
+            self.assertEquals(newtoken['token_type'], tk.token_type)
+            self.assertEquals(3600, tk.expires_in)
+            self.assertEquals(newtoken['refresh_token'], tk.refresh_token)
+
 
     @parameterized.expand([
         (True,),

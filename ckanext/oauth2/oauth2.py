@@ -36,6 +36,8 @@ import requests
 from requests_oauthlib import OAuth2Session
 import six
 
+import jwt
+
 import constants
 
 
@@ -60,6 +62,8 @@ class OAuth2Helper(object):
         self.verify_https = os.environ.get('OAUTHLIB_INSECURE_TRANSPORT', '') == ""
         if self.verify_https and os.environ.get("REQUESTS_CA_BUNDLE", "").strip() != "":
             self.verify_https = os.environ["REQUESTS_CA_BUNDLE"].strip()
+
+        self.jwt_enable = six.text_type(os.environ.get('CKAN_OAUTH2_JWT_ENABLE', toolkit.config.get('ckan.oauth2.jwt.enable',''))).strip().lower() in ("true", "1", "on")
 
         self.legacy_idm = six.text_type(os.environ.get('CKAN_OAUTH2_LEGACY_IDM', toolkit.config.get('ckan.oauth2.legacy_idm', ''))).strip().lower() in ("true", "1", "on")
         self.authorization_endpoint = six.text_type(os.environ.get('CKAN_OAUTH2_AUTHORIZATION_ENDPOINT', toolkit.config.get('ckan.oauth2.authorization_endpoint', ''))).strip()
@@ -126,61 +130,74 @@ class OAuth2Helper(object):
         return token
 
     def identify(self, token):
-        try:
-            if self.legacy_idm:
-                profile_response = requests.get(self.profile_api_url + '?access_token=%s' % token['access_token'], verify=self.verify_https)
-            else:
-                oauth = OAuth2Session(self.client_id, token=token)
-                profile_response = oauth.get(self.profile_api_url, verify=self.verify_https)
 
-        except requests.exceptions.SSLError as e:
-            # TODO search a better way to detect invalid certificates
-            if "verify failed" in six.text_type(e):
-                raise InsecureTransportError()
-            else:
-                raise
+        if self.jwt_enable:
 
-        # Token can be invalid
-        if not profile_response.ok:
-            error = profile_response.json()
-            if error.get('error', '') == 'invalid_token':
-                raise ValueError(error.get('error_description'))
-            else:
-                profile_response.raise_for_status()
+            access_token = bytes(token['access_token'])
+            user_data = jwt.decode(access_token, verify=False)
+            user = self.user_json(user_data)
         else:
-            user_data = profile_response.json()
-            email = user_data[self.profile_api_mail_field]
-            user_name = user_data[self.profile_api_user_field]
 
-            # In CKAN can exists more than one user associated with the same email
-            # Some providers, like Google and FIWARE only allows one account per email
-            user = None
-            users = model.User.by_email(email)
-            if len(users) == 1:
-                user = users[0]
+            try:
+                if self.legacy_idm:
+                    profile_response = requests.get(self.profile_api_url + '?access_token=%s' % token['access_token'], verify=self.verify_https)
+                else:
+                    oauth = OAuth2Session(self.client_id, token=token)
+                    profile_response = oauth.get(self.profile_api_url, verify=self.verify_https)
 
-            # If the user does not exist, we have to create it...
-            if user is None:
-                user = model.User(email=email)
+            except requests.exceptions.SSLError as e:
+                # TODO search a better way to detect invalid certificates
+                if "verify failed" in six.text_type(e):
+                    raise InsecureTransportError()
+                else:
+                    raise
 
-            # Now we update his/her user_name with the one provided by the OAuth2 service
-            # In the future, users will be obtained based on this field
-            user.name = user_name
+            # Token can be invalid
+            if not profile_response.ok:
+                error = profile_response.json()
+                if error.get('error', '') == 'invalid_token':
+                    raise ValueError(error.get('error_description'))
+                else:
+                    profile_response.raise_for_status()
+            else:
+                user_data = profile_response.json()
+                user = self.user_json(user_data)
 
-            # Update fullname
-            if self.profile_api_fullname_field != "" and self.profile_api_fullname_field in user_data:
-                user.fullname = user_data[self.profile_api_fullname_field]
+        # Save the user in the database
+        model.Session.add(user)
+        model.Session.commit()
+        model.Session.remove()
 
-            # Update sysadmin status
-            if self.profile_api_groupmembership_field != "" and self.profile_api_groupmembership_field in user_data:
-                user.sysadmin = self.sysadmin_group_name in user_data[self.profile_api_groupmembership_field]
+        return user.name
 
-            # Save the user in the database
-            model.Session.add(user)
-            model.Session.commit()
-            model.Session.remove()
+    def user_json(self, user_data):
+        email = user_data[self.profile_api_mail_field]
+        user_name = user_data[self.profile_api_user_field]
 
-            return user.name
+        # In CKAN can exists more than one user associated with the same email
+        # Some providers, like Google and FIWARE only allows one account per email
+        user = None
+        users = model.User.by_email(email)
+        if len(users) == 1:
+            user = users[0]
+
+        # If the user does not exist, we have to create it...
+        if user is None:
+            user = model.User(email=email)
+
+        # Now we update his/her user_name with the one provided by the OAuth2 service
+        # In the future, users will be obtained based on this field
+        user.name = user_name
+
+        # Update fullname
+        if self.profile_api_fullname_field != "" and self.profile_api_fullname_field in user_data:
+            user.fullname = user_data[self.profile_api_fullname_field]
+
+        # Update sysadmin status
+        if self.profile_api_groupmembership_field != "" and self.profile_api_groupmembership_field in user_data:
+            user.sysadmin = self.sysadmin_group_name in user_data[self.profile_api_groupmembership_field]
+
+        return user
 
     def _get_rememberer(self, environ):
         plugins = environ.get('repoze.who.plugins', {})
@@ -218,6 +235,7 @@ class OAuth2Helper(object):
             }
 
     def update_token(self, user_name, token):
+
         user_token = db.UserToken.by_user_name(user_name=user_name)
         # Create the user if it does not exist
         if not user_token:
@@ -227,7 +245,12 @@ class OAuth2Helper(object):
         user_token.access_token = token['access_token']
         user_token.token_type = token['token_type']
         user_token.refresh_token = token.get('refresh_token')
-        user_token.expires_in = token['expires_in']
+        if 'expires_in' in token:
+            user_token.expires_in = token['expires_in']
+        else:
+            access_token = jwt.decode(user_token.access_token, verify=False)
+            user_token.expires_in = access_token['exp'] - access_token['iat']
+
         model.Session.add(user_token)
         model.Session.commit()
 
