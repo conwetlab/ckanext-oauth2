@@ -27,7 +27,7 @@ class DBTest(unittest.TestCase):
 
     def setUp(self):
         # Restart databse initial status
-        db.UserToken = None
+        db.UserToken = None 
 
         # Create mocks
         self._sa = db.sa

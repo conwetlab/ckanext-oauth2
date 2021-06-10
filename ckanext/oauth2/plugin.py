@@ -18,17 +18,19 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OAuth2 CKAN Extension.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
+# from __future__ import unicode_literals
 
 import logging
-import oauth2
+from .oauth2 import *
 import os
 
 from functools import partial
 from ckan import plugins
 from ckan.common import g
 from ckan.plugins import toolkit
-from urlparse import urlparse
+import urllib.parse
+from ckanext.oauth2.views import get_blueprints
+from ckanext.cloudstorage.cli import get_commands
 
 log = logging.getLogger(__name__)
 
@@ -62,66 +64,82 @@ def request_reset(context, data_dict):
     return _no_permissions(context, msg)
 
 
-def _get_previous_page(default_page):
-    if 'came_from' not in toolkit.request.params:
-        came_from_url = toolkit.request.headers.get('Referer', default_page)
-    else:
-        came_from_url = toolkit.request.params.get('came_from', default_page)
+# def _get_previous_page(default_page):
+#     if 'came_from' not in toolkit.request.params:
+#         came_from_url = toolkit.request.headers.get('Referer', default_page)
+#     else:
+#         came_from_url = toolkit.request.params.get('came_from', default_page)
 
-    came_from_url_parsed = urlparse(came_from_url)
+#     came_from_url_parsed = urllib.parse(came_from_url)
 
-    # Avoid redirecting users to external hosts
-    if came_from_url_parsed.netloc != '' and came_from_url_parsed.netloc != toolkit.request.host:
-        came_from_url = default_page
+#     # Avoid redirecting users to external hosts
+#     if came_from_url_parsed.netloc != '' and came_from_url_parsed.netloc != toolkit.request.host:
+#         came_from_url = default_page
 
-    # When a user is being logged and REFERER == HOME or LOGOUT_PAGE
-    # he/she must be redirected to the dashboard
-    pages = ['/', '/user/logged_out_redirect']
-    if came_from_url_parsed.path in pages:
-        came_from_url = default_page
+#     # When a user is being logged and REFERER == HOME or LOGOUT_PAGE
+#     # he/she must be redirected to the dashboard
+#     pages = ['/', '/user/logged_out_redirect']
+#     if came_from_url_parsed.path in pages:
+#         came_from_url = default_page
 
-    return came_from_url
+#     return came_from_url
+
+class _OAuth2Plugin(plugins.SingletonPlugin):
+    plugins.implements(plugins.IBlueprint)
+    plugins.implements(plugins.IClick)
+
+    # IBlueprint
+
+    def get_blueprint(self):
+        return get_blueprints()
+
+    # IClick
+
+    def get_commands(self):
+        return get_commands()
 
 
-class OAuth2Plugin(plugins.SingletonPlugin):
-
+class OAuth2Plugin(_OAuth2Plugin, plugins.SingletonPlugin):
     plugins.implements(plugins.IAuthenticator, inherit=True)
     plugins.implements(plugins.IAuthFunctions, inherit=True)
-    plugins.implements(plugins.IRoutes, inherit=True)
+    # plugins.implements(plugins.IRoutes, inherit=True)
     plugins.implements(plugins.IConfigurer)
+
 
     def __init__(self, name=None):
         '''Store the OAuth 2 client configuration'''
         log.debug('Init OAuth2 extension')
 
-        self.oauth2helper = oauth2.OAuth2Helper()
+        # init_db(model)
+        log.debug(f'UserToken: {UserToken}')
+        self.oauth2helper = OAuth2Helper()
 
-    def before_map(self, m):
-        log.debug('Setting up the redirections to the OAuth2 service')
+    # def before_map(self, m):
+    #     log.debug('Setting up the redirections to the OAuth2 service')
 
-        m.connect('/user/login',
-                  controller='ckanext.oauth2.controller:OAuth2Controller',
-                  action='login')
+    #     m.connect('/user/login',
+    #               controller='ckanext.oauth2.controller:OAuth2Controller',
+    #               action='login')
 
-        # We need to handle petitions received to the Callback URL
-        # since some error can arise and we need to process them
-        m.connect('/oauth2/callback',
-                  controller='ckanext.oauth2.controller:OAuth2Controller',
-                  action='callback')
+    #     # We need to handle petitions received to the Callback URL
+    #     # since some error can arise and we need to process them
+    #     m.connect('/oauth2/callback',
+    #               controller='ckanext.oauth2.controller:OAuth2Controller',
+    #               action='callback')
 
-        # Redirect the user to the OAuth service register page
-        if self.register_url:
-            m.redirect('/user/register', self.register_url)
+    #     # Redirect the user to the OAuth service register page
+    #     if self.register_url:
+    #         m.redirect('/user/register', self.register_url)
 
-        # Redirect the user to the OAuth service reset page
-        if self.reset_url:
-            m.redirect('/user/reset', self.reset_url)
+    #     # Redirect the user to the OAuth service reset page
+    #     if self.reset_url:
+    #         m.redirect('/user/reset', self.reset_url)
 
-        # Redirect the user to the OAuth service reset page
-        if self.edit_url:
-            m.redirect('/user/edit/{user}', self.edit_url)
+    #     # Redirect the user to the OAuth service reset page
+    #     if self.edit_url:
+    #         m.redirect('/user/edit/{user}', self.edit_url)
 
-        return m
+    #     return m
 
     def identify(self):
         log.debug('identify')
@@ -129,12 +147,14 @@ class OAuth2Plugin(plugins.SingletonPlugin):
         def _refresh_and_save_token(user_name):
             new_token = self.oauth2helper.refresh_token(user_name)
             if new_token:
-                toolkit.c.usertoken = new_token
+                toolkit.g.usertoken = new_token
 
         environ = toolkit.request.environ
         apikey = toolkit.request.headers.get(self.authorization_header, '')
         user_name = None
 
+        # log.debug(f'apikey: {apikey}')
+        # log.debug(f'headers: {toolkit.request.headers}')
         if self.authorization_header == "authorization":
             if apikey.startswith('Bearer '):
                 apikey = apikey[7:].strip()
@@ -144,22 +164,30 @@ class OAuth2Plugin(plugins.SingletonPlugin):
         # This API Key is not the one of CKAN, it's the one provided by the OAuth2 Service
         if apikey:
             try:
+                # log.debug(f'api_key: {apikey}')
                 token = {'access_token': apikey}
                 user_name = self.oauth2helper.identify(token)
-            except Exception:
+                log.debug(f'user_name1: {user_name}')
+            except Exception as e:
+                log.debug(f'Auth error:')
+                log.debug(e)
                 pass
 
+        # log.debug(f'user_name2: {user_name}')
+        # log.debug(f'authorization_header: {self.authorization_header}')
+        # log.debug(f'environ: {environ}')
         # If the authentication via API fails, we can still log in the user using session.
         if user_name is None and 'repoze.who.identity' in environ:
             user_name = environ['repoze.who.identity']['repoze.who.userid']
+            # log.debug(f'user_name3: {user_name}')
             log.info('User %s logged using session' % user_name)
 
         # If we have been able to log in the user (via API or Session)
         if user_name:
             g.user = user_name
-            toolkit.c.user = user_name
-            toolkit.c.usertoken = self.oauth2helper.get_stored_token(user_name)
-            toolkit.c.usertoken_refresh = partial(_refresh_and_save_token, user_name)
+            toolkit.g.user = user_name
+            toolkit.g.usertoken = self.oauth2helper.get_stored_token(user_name)
+            toolkit.g.usertoken_refresh = partial(_refresh_and_save_token, user_name)
         else:
             g.user = None
             log.warn('The user is not currently logged...')
@@ -175,6 +203,7 @@ class OAuth2Plugin(plugins.SingletonPlugin):
 
     def update_config(self, config):
         # Update our configuration
+        log.debug('update config...')
         self.register_url = os.environ.get("CKAN_OAUTH2_REGISTER_URL", config.get('ckan.oauth2.register_url', None))
         self.reset_url = os.environ.get("CKAN_OAUTH2_RESET_URL", config.get('ckan.oauth2.reset_url', None))
         self.edit_url = os.environ.get("CKAN_OAUTH2_EDIT_URL", config.get('ckan.oauth2.edit_url', None))

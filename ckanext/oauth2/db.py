@@ -18,32 +18,42 @@
 # along with OAuth2 CKAN Extension.  If not, see <http://www.gnu.org/licenses/>.
 
 import sqlalchemy as sa
+import ckan.model.meta as meta
+import logging
+from ckan.model.domain_object import DomainObject
+from sqlalchemy.ext.declarative import declarative_base
 
-UserToken = None
+log = logging.getLogger(__name__)
+
+Base = declarative_base()
+metadata = Base.metadata
 
 
-def init_db(model):
+class UserToken(Base, DomainObject):
+    __tablename__ = 'user_token'
 
-    global UserToken
-    if UserToken is None:
+    def __init__(self, user_name, access_token, token_type, refresh_token, expires_in):
+        self.user_name = user_name
+        self.access_token = access_token
+        self.token_type = token_type
+        self.refresh_token = refresh_token
+        self.expires_in = expires_in
 
-        class _UserToken(model.DomainObject):
+    @classmethod
+    def by_user_name(cls, user_name):
+        return meta.Session.query(cls).filter_by(user_name=user_name).first()
 
-            @classmethod
-            def by_user_name(cls, user_name):
-                return model.Session.query(cls).filter_by(user_name=user_name).first()
 
-        UserToken = _UserToken
+    user_name = sa.Column(sa.types.UnicodeText, primary_key=True)
+    access_token = sa.Column(sa.types.UnicodeText)
+    token_type = sa.Column(sa.types.UnicodeText)
+    refresh_token = sa.Column(sa.types.UnicodeText)
+    expires_in = sa.Column(sa.types.UnicodeText)
 
-        user_token_table = sa.Table('user_token', model.meta.metadata,
-            sa.Column('user_name', sa.types.UnicodeText, primary_key=True),
-            sa.Column('access_token', sa.types.UnicodeText),
-            sa.Column('token_type', sa.types.UnicodeText),
-            sa.Column('refresh_token', sa.types.UnicodeText),
-            sa.Column('expires_in', sa.types.UnicodeText)
-        )
 
-        # Create the table only if it does not exist
-        user_token_table.create(checkfirst=True)
 
-        model.meta.mapper(UserToken, user_token_table)
+
+        # # Create the table only if it does not exist
+        # user_token_table.create(checkfirst=True)
+
+        # model.meta.mapper(UserToken, user_token_table)

@@ -19,11 +19,11 @@
 # along with OAuth2 CKAN Extension.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from __future__ import unicode_literals
+# from __future__ import unicode_literals
 
 import base64
 import ckan.model as model
-import db
+from ckanext.oauth2.db import UserToken
 import json
 import logging
 from six.moves.urllib.parse import urljoin
@@ -38,22 +38,23 @@ import six
 
 import jwt
 
-import constants
+from .constants import *
+from flask import Flask, request, redirect, session, url_for, jsonify
+
 
 
 log = logging.getLogger(__name__)
 
 
 def generate_state(url):
-    return b64encode(bytes(json.dumps({constants.CAME_FROM_FIELD: url})))
+    return b64encode(bytes(json.dumps({CAME_FROM_FIELD: url}).encode()))
 
 
 def get_came_from(state):
-    return json.loads(b64decode(state)).get(constants.CAME_FROM_FIELD, '/')
+    return json.loads(b64decode(state)).get(CAME_FROM_FIELD, '/')
 
 
 REQUIRED_CONF = ("authorization_endpoint", "token_endpoint", "client_id", "client_secret", "profile_api_url", "profile_api_user_field", "profile_api_mail_field")
-
 
 class OAuth2Helper(object):
 
@@ -79,10 +80,8 @@ class OAuth2Helper(object):
         self.profile_api_groupmembership_field = six.text_type(os.environ.get('CKAN_OAUTH2_PROFILE_API_GROUPMEMBERSHIP_FIELD', toolkit.config.get('ckan.oauth2.profile_api_groupmembership_field', ''))).strip()
         self.sysadmin_group_name = six.text_type(os.environ.get('CKAN_OAUTH2_SYSADMIN_GROUP_NAME', toolkit.config.get('ckan.oauth2.sysadmin_group_name', ''))).strip()
 
-        self.redirect_uri = urljoin(urljoin(toolkit.config.get('ckan.site_url', 'http://localhost:5000'), toolkit.config.get('ckan.root_path')), constants.REDIRECT_URL)
+        self.redirect_uri = urljoin(urljoin(toolkit.config.get('ckan.site_url', 'http://localhost:5000'), toolkit.config.get('ckan.root_path')), REDIRECT_URL)
 
-        # Init db
-        db.init_db(model)
 
         missing = [key for key in REQUIRED_CONF if getattr(self, key, "") == ""]
         if missing:
@@ -93,11 +92,12 @@ class OAuth2Helper(object):
     def challenge(self, came_from_url):
         # This function is called by the log in function when the user is not logged in
         state = generate_state(came_from_url)
+        # log.debug(f'redirect uri: {self.redirect_uri}')
         oauth = OAuth2Session(self.client_id, redirect_uri=self.redirect_uri, scope=self.scope, state=state)
         auth_url, _ = oauth.authorization_url(self.authorization_endpoint)
         log.debug('Challenge: Redirecting challenge to page {0}'.format(auth_url))
         # CKAN 2.6 only supports bytes
-        return toolkit.redirect_to(auth_url.encode('utf-8'))
+        return toolkit.redirect_to(auth_url)#.encode('utf-8'))
 
     def get_token(self):
         oauth = OAuth2Session(self.client_id, redirect_uri=self.redirect_uri, scope=self.scope)
@@ -111,39 +111,45 @@ class OAuth2Helper(object):
         if self.legacy_idm:
             # This is only required for Keyrock v6 and v5
             headers['Authorization'] = 'Basic %s' % base64.urlsafe_b64encode(
-                '%s:%s' % (self.client_id, self.client_secret)
+                (f'{self.client_id}:{self.client_secret}').encode()
             )
 
         try:
+            # log.debug(f'self.token_endpoint: {self.token_endpoint}')
+            # log.debug(f'headers: {headers}')
+            # log.debug(f'authorization_response: {toolkit.request.url}')
+            # log.debug(f'client_secret: {self.client_secret}')
             token = oauth.fetch_token(self.token_endpoint,
-                                      headers=headers,
+                                      client_id=self.client_id,
                                       client_secret=self.client_secret,
-                                      authorization_response=toolkit.request.url,
-                                      verify=self.verify_https)
+                                      authorization_response=toolkit.request.url)
+                                    #   verify=self.verify_https
+                                    #   headers=headers,
+            # log.debug(f'token: {token}')
         except requests.exceptions.SSLError as e:
             # TODO search a better way to detect invalid certificates
             if "verify failed" in six.text_type(e):
                 raise InsecureTransportError()
             else:
                 raise
-
         return token
 
     def identify(self, token):
 
         if self.jwt_enable:
-
+            log.debug('jwt_enabled')
             access_token = bytes(token['access_token'])
             user_data = jwt.decode(access_token, verify=False)
             user = self.user_json(user_data)
         else:
-
             try:
                 if self.legacy_idm:
                     profile_response = requests.get(self.profile_api_url + '?access_token=%s' % token['access_token'], verify=self.verify_https)
+                    log.debug(f'profile response: {profile_response}')
                 else:
                     oauth = OAuth2Session(self.client_id, token=token)
-                    profile_response = oauth.get(self.profile_api_url, verify=self.verify_https)
+                    profile_response = oauth.get(self.profile_api_url)
+                    log.debug(f'profile response_: {profile_response}')
 
             except requests.exceptions.SSLError as e:
                 # TODO search a better way to detect invalid certificates
@@ -162,6 +168,7 @@ class OAuth2Helper(object):
             else:
                 user_data = profile_response.json()
                 user = self.user_json(user_data)
+                # log.debug(f'user: {user}')
 
         # Save the user in the database
         model.Session.add(user)
@@ -214,18 +221,33 @@ class OAuth2Helper(object):
         rememberer = self._get_rememberer(environ)
         identity = {'repoze.who.userid': user_name}
         headers = rememberer.remember(environ, identity)
+        response = jsonify()
         for header, value in headers:
-            toolkit.response.headers.add(header, value)
+            response.headers[header] = value
+        return response
 
-    def redirect_from_callback(self):
+    def redirect_from_callback(self, resp_remember):
         '''Redirect to the callback URL after a successful authentication.'''
         state = toolkit.request.params.get('state')
         came_from = get_came_from(state)
-        toolkit.response.status = 302
-        toolkit.response.location = came_from
+        # toolkit.response.status = 302
+        # toolkit.response.location = came_from
+        # return toolkit.redirect_to(came_from)
+        # log.debug(f'come from: {came_from}')
+        # toolkit.response.status = 302
+        # toolkit.response.location = came_from
+        response = jsonify()
+        response.status_code = 302
+        for header, value in resp_remember.headers:
+            response.headers[header] = value
+        response.headers['location'] = came_from
+        response.autocorrect_location_header = False
+        return response
+
 
     def get_stored_token(self, user_name):
-        user_token = db.UserToken.by_user_name(user_name=user_name)
+        # log.debug(f'user_name: {user_name}')
+        user_token = UserToken.by_user_name(user_name=user_name)
         if user_token:
             return {
                 'access_token': user_token.access_token,
@@ -235,22 +257,25 @@ class OAuth2Helper(object):
             }
 
     def update_token(self, user_name, token):
-
-        user_token = db.UserToken.by_user_name(user_name=user_name)
+        try:
+            user_token = UserToken.by_user_name(user_name=user_name)
+        except AttributeError as e:
+            user_token = None
+        # log.debug(f'User_token: {user_token}')
         # Create the user if it does not exist
-        if not user_token:
-            user_token = db.UserToken()
-            user_token.user_name = user_name
         # Save the new token
-        user_token.access_token = token['access_token']
-        user_token.token_type = token['token_type']
-        user_token.refresh_token = token.get('refresh_token')
+        access_token = token['access_token']
+        token_type = token['token_type']
+        refresh_token = token.get('refresh_token')
         if 'expires_in' in token:
-            user_token.expires_in = token['expires_in']
+            expires_in = token['expires_in']
         else:
             access_token = jwt.decode(user_token.access_token, verify=False)
-            user_token.expires_in = access_token['exp'] - access_token['iat']
-
+            expires_in = access_token['exp'] - access_token['iat']
+        if not user_token:
+            user_token = UserToken(user_name, access_token, token_type, refresh_token, expires_in)
+            log.debug('user addedd')
+        # log.debug(f'User_token: {user_token}')
         model.Session.add(user_token)
         model.Session.commit()
 
