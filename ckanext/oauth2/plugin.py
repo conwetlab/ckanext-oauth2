@@ -30,7 +30,6 @@ from ckan.common import g
 from ckan.plugins import toolkit
 import urllib.parse
 from ckanext.oauth2.views import get_blueprints
-from ckanext.cloudstorage.cli import get_commands
 
 log = logging.getLogger(__name__)
 
@@ -86,17 +85,11 @@ def request_reset(context, data_dict):
 
 class _OAuth2Plugin(plugins.SingletonPlugin):
     plugins.implements(plugins.IBlueprint)
-    plugins.implements(plugins.IClick)
 
     # IBlueprint
 
     def get_blueprint(self):
         return get_blueprints()
-
-    # IClick
-
-    def get_commands(self):
-        return get_commands()
 
 
 class OAuth2Plugin(_OAuth2Plugin, plugins.SingletonPlugin):
