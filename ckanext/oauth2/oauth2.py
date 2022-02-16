@@ -127,6 +127,7 @@ class OAuth2Helper(object):
     def identify(self, token):
 
         if self.jwt_enable:
+
             log.debug('jwt_enabled')
             access_token = bytes(token['access_token'])
             user_data = jwt.decode(access_token, verify=False)
@@ -220,12 +221,6 @@ class OAuth2Helper(object):
         '''Redirect to the callback URL after a successful authentication.'''
         state = toolkit.request.params.get('state')
         came_from = get_came_from(state)
-        # toolkit.response.status = 302
-        # toolkit.response.location = came_from
-        # return toolkit.redirect_to(came_from)
-        # log.debug(f'come from: {came_from}')
-        # toolkit.response.status = 302
-        # toolkit.response.location = came_from
         response = jsonify()
         response.status_code = 302
         for header, value in resp_remember.headers:

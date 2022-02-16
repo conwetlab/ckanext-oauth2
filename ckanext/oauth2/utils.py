@@ -81,9 +81,6 @@ def proxy_service_url(req, url):
         else:
             r = requests.get(url, params=req.query_string, stream=True)
 
-        # log.info('Request: {req}'.format(req=r.request.url))
-        # log.info('Request Headers: {h}'.format(h=r.request.headers))
-
         cl = r.headers.get("content-length")
         if cl and int(cl) > MAX_FILE_SIZE:
             base.abort(
