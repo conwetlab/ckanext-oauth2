@@ -261,7 +261,7 @@ class OAuth2Helper(object):
             expires_in = access_token['exp'] - access_token['iat']
         if not user_token:
             user_token = UserToken(user_name, access_token, token_type, refresh_token, expires_in)
-            log.debug('user addedd')
+            log.debug('user added')
 
         model.Session.add(user_token)
         model.Session.commit()
