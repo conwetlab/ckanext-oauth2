@@ -98,7 +98,6 @@ class OAuth2Plugin(_OAuth2Plugin, plugins.SingletonPlugin):
     # plugins.implements(plugins.IRoutes, inherit=True)
     plugins.implements(plugins.IConfigurer)
 
-
     def __init__(self, name=None):
         '''Store the OAuth 2 client configuration'''
         log.debug('Init OAuth2 extension')
@@ -146,8 +145,6 @@ class OAuth2Plugin(_OAuth2Plugin, plugins.SingletonPlugin):
         apikey = toolkit.request.headers.get(self.authorization_header, '')
         user_name = None
 
-        # log.debug(f'apikey: {apikey}')
-        # log.debug(f'headers: {toolkit.request.headers}')
         if self.authorization_header == "authorization":
             if apikey.startswith('Bearer '):
                 apikey = apikey[7:].strip()
@@ -157,7 +154,6 @@ class OAuth2Plugin(_OAuth2Plugin, plugins.SingletonPlugin):
         # This API Key is not the one of CKAN, it's the one provided by the OAuth2 Service
         if apikey:
             try:
-                # log.debug(f'api_key: {apikey}')
                 token = {'access_token': apikey}
                 user_name = self.oauth2helper.identify(token)
                 log.debug(f'user_name1: {user_name}')
@@ -166,13 +162,9 @@ class OAuth2Plugin(_OAuth2Plugin, plugins.SingletonPlugin):
                 log.debug(e)
                 pass
 
-        # log.debug(f'user_name2: {user_name}')
-        # log.debug(f'authorization_header: {self.authorization_header}')
-        # log.debug(f'environ: {environ}')
         # If the authentication via API fails, we can still log in the user using session.
         if user_name is None and 'repoze.who.identity' in environ:
             user_name = environ['repoze.who.identity']['repoze.who.userid']
-            # log.debug(f'user_name3: {user_name}')
             log.info('User %s logged using session' % user_name)
 
         # If we have been able to log in the user (via API or Session)

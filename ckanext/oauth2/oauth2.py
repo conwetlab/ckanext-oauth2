@@ -92,7 +92,6 @@ class OAuth2Helper(object):
     def challenge(self, came_from_url):
         # This function is called by the log in function when the user is not logged in
         state = generate_state(came_from_url)
-        # log.debug(f'redirect uri: {self.redirect_uri}')
         oauth = OAuth2Session(self.client_id, redirect_uri=self.redirect_uri, scope=self.scope, state=state)
         auth_url, _ = oauth.authorization_url(self.authorization_endpoint)
         log.debug('Challenge: Redirecting challenge to page {0}'.format(auth_url))
@@ -115,23 +114,19 @@ class OAuth2Helper(object):
             )
 
         try:
-            # log.debug(f'self.token_endpoint: {self.token_endpoint}')
-            # log.debug(f'headers: {headers}')
-            # log.debug(f'authorization_response: {toolkit.request.url}')
-            # log.debug(f'client_secret: {self.client_secret}')
             token = oauth.fetch_token(self.token_endpoint,
                                       client_id=self.client_id,
                                       client_secret=self.client_secret,
                                       authorization_response=toolkit.request.url)
                                     #   verify=self.verify_https
                                     #   headers=headers,
-            # log.debug(f'token: {token}')
         except requests.exceptions.SSLError as e:
             # TODO search a better way to detect invalid certificates
             if "verify failed" in six.text_type(e):
                 raise InsecureTransportError()
             else:
                 raise
+
         return token
 
     def identify(self, token):
@@ -142,6 +137,7 @@ class OAuth2Helper(object):
             user_data = jwt.decode(access_token, verify=False)
             user = self.user_json(user_data)
         else:
+
             try:
                 if self.legacy_idm:
                     profile_response = requests.get(self.profile_api_url + '?access_token=%s' % token['access_token'], verify=self.verify_https)
@@ -168,7 +164,6 @@ class OAuth2Helper(object):
             else:
                 user_data = profile_response.json()
                 user = self.user_json(user_data)
-                # log.debug(f'user: {user}')
 
         # Save the user in the database
         model.Session.add(user)
@@ -244,9 +239,7 @@ class OAuth2Helper(object):
         response.autocorrect_location_header = False
         return response
 
-
     def get_stored_token(self, user_name):
-        # log.debug(f'user_name: {user_name}')
         user_token = UserToken.by_user_name(user_name=user_name)
         if user_token:
             return {
@@ -261,7 +254,6 @@ class OAuth2Helper(object):
             user_token = UserToken.by_user_name(user_name=user_name)
         except AttributeError as e:
             user_token = None
-        # log.debug(f'User_token: {user_token}')
         # Create the user if it does not exist
         # Save the new token
         access_token = token['access_token']
@@ -275,7 +267,7 @@ class OAuth2Helper(object):
         if not user_token:
             user_token = UserToken(user_name, access_token, token_type, refresh_token, expires_in)
             log.debug('user addedd')
-        # log.debug(f'User_token: {user_token}')
+
         model.Session.add(user_token)
         model.Session.commit()
 
