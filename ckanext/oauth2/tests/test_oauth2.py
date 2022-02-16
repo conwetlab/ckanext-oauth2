@@ -291,7 +291,7 @@ class OAuth2PluginTest(unittest.TestCase):
         request = make_request(False, 'localhost', 'user/login', {})
         request.environ = MagicMock()
         request.headers = {}
-        came_from = '/came_from_theme'
+        came_from = '/came_from_example'
 
         oauth2.toolkit.request = request
 
