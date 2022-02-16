@@ -19,8 +19,6 @@
 # along with OAuth2 CKAN Extension.  If not, see <http://www.gnu.org/licenses/>.
 
 
-# from __future__ import unicode_literals
-
 import base64
 import ckan.model as model
 from ckanext.oauth2.db import UserToken
@@ -40,7 +38,6 @@ import jwt
 
 from .constants import *
 from flask import Flask, request, redirect, session, url_for, jsonify
-
 
 
 log = logging.getLogger(__name__)
@@ -96,7 +93,7 @@ class OAuth2Helper(object):
         auth_url, _ = oauth.authorization_url(self.authorization_endpoint)
         log.debug('Challenge: Redirecting challenge to page {0}'.format(auth_url))
         # CKAN 2.6 only supports bytes
-        return toolkit.redirect_to(auth_url)#.encode('utf-8'))
+        return toolkit.redirect_to(auth_url)
 
     def get_token(self):
         oauth = OAuth2Session(self.client_id, redirect_uri=self.redirect_uri, scope=self.scope)
@@ -118,8 +115,6 @@ class OAuth2Helper(object):
                                       client_id=self.client_id,
                                       client_secret=self.client_secret,
                                       authorization_response=toolkit.request.url)
-                                    #   verify=self.verify_https
-                                    #   headers=headers,
         except requests.exceptions.SSLError as e:
             # TODO search a better way to detect invalid certificates
             if "verify failed" in six.text_type(e):

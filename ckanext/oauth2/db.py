@@ -49,11 +49,3 @@ class UserToken(Base, DomainObject):
     token_type = sa.Column(sa.types.UnicodeText)
     refresh_token = sa.Column(sa.types.UnicodeText)
     expires_in = sa.Column(sa.types.UnicodeText)
-
-
-
-
-        # # Create the table only if it does not exist
-        # user_token_table.create(checkfirst=True)
-
-        # model.meta.mapper(UserToken, user_token_table)

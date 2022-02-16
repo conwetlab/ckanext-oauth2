@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import logging
 from flask import Blueprint, jsonify, make_response
 import logging

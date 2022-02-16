@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import json
 import logging
 from six.moves.urllib.parse import urlencode, urlsplit, parse_qs

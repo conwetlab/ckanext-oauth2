@@ -88,9 +88,6 @@ setup(
             'oauth2 = ckanext.oauth2.plugin:OAuth2Plugin',
         ]
     },
-        # 'nose.plugins': [
-        #     'pylons = pylons.test:PylonsPlugin'
-        # ]
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Environment :: Web Environment",
