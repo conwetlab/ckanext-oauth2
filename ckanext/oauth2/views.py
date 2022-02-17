@@ -56,12 +56,10 @@ def callback():
 
     try:
         token = oauth2helper.get_token()
-        # log.debug(f'token:{token}')
 
         user_name = oauth2helper.identify(token)
         response = oauth2helper.remember(user_name)
-        # log.debug(f'usr:{user_name}')
-        # log.debug(f'response remember:{response}')
+        log.debug(f'usr:{user_name}')
 
         oauth2helper.update_token(user_name, token)
         response = oauth2helper.redirect_from_callback(response)

@@ -28,9 +28,10 @@ from functools import partial
 from ckan import plugins
 from ckan.common import g
 from ckan.plugins import toolkit
+import ckanext.oauth2.db as db
 import urllib.parse
 from ckanext.oauth2.views import get_blueprints
-from ckanext.cloudstorage.cli import get_commands
+from ckanext.oauth2.cli import get_commands
 
 log = logging.getLogger(__name__)
 
@@ -64,26 +65,6 @@ def request_reset(context, data_dict):
     return _no_permissions(context, msg)
 
 
-# def _get_previous_page(default_page):
-#     if 'came_from' not in toolkit.request.params:
-#         came_from_url = toolkit.request.headers.get('Referer', default_page)
-#     else:
-#         came_from_url = toolkit.request.params.get('came_from', default_page)
-
-#     came_from_url_parsed = urllib.parse(came_from_url)
-
-#     # Avoid redirecting users to external hosts
-#     if came_from_url_parsed.netloc != '' and came_from_url_parsed.netloc != toolkit.request.host:
-#         came_from_url = default_page
-
-#     # When a user is being logged and REFERER == HOME or LOGOUT_PAGE
-#     # he/she must be redirected to the dashboard
-#     pages = ['/', '/user/logged_out_redirect']
-#     if came_from_url_parsed.path in pages:
-#         came_from_url = default_page
-
-#     return came_from_url
-
 class _OAuth2Plugin(plugins.SingletonPlugin):
     plugins.implements(plugins.IBlueprint)
     plugins.implements(plugins.IClick)
@@ -110,36 +91,10 @@ class OAuth2Plugin(_OAuth2Plugin, plugins.SingletonPlugin):
         '''Store the OAuth 2 client configuration'''
         log.debug('Init OAuth2 extension')
 
-        # init_db(model)
-        log.debug(f'UserToken: {UserToken}')
+        db.init_db(model)
+        log.debug(f'Creating UserToken...')
         self.oauth2helper = OAuth2Helper()
 
-    # def before_map(self, m):
-    #     log.debug('Setting up the redirections to the OAuth2 service')
-
-    #     m.connect('/user/login',
-    #               controller='ckanext.oauth2.controller:OAuth2Controller',
-    #               action='login')
-
-    #     # We need to handle petitions received to the Callback URL
-    #     # since some error can arise and we need to process them
-    #     m.connect('/oauth2/callback',
-    #               controller='ckanext.oauth2.controller:OAuth2Controller',
-    #               action='callback')
-
-    #     # Redirect the user to the OAuth service register page
-    #     if self.register_url:
-    #         m.redirect('/user/register', self.register_url)
-
-    #     # Redirect the user to the OAuth service reset page
-    #     if self.reset_url:
-    #         m.redirect('/user/reset', self.reset_url)
-
-    #     # Redirect the user to the OAuth service reset page
-    #     if self.edit_url:
-    #         m.redirect('/user/edit/{user}', self.edit_url)
-
-    #     return m
 
     def identify(self):
         log.debug('identify')
@@ -155,6 +110,7 @@ class OAuth2Plugin(_OAuth2Plugin, plugins.SingletonPlugin):
 
         # log.debug(f'apikey: {apikey}')
         # log.debug(f'headers: {toolkit.request.headers}')
+
         if self.authorization_header == "authorization":
             if apikey.startswith('Bearer '):
                 apikey = apikey[7:].strip()
@@ -173,13 +129,9 @@ class OAuth2Plugin(_OAuth2Plugin, plugins.SingletonPlugin):
                 log.debug(e)
                 pass
 
-        # log.debug(f'user_name2: {user_name}')
-        # log.debug(f'authorization_header: {self.authorization_header}')
-        # log.debug(f'environ: {environ}')
         # If the authentication via API fails, we can still log in the user using session.
         if user_name is None and 'repoze.who.identity' in environ:
             user_name = environ['repoze.who.identity']['repoze.who.userid']
-            # log.debug(f'user_name3: {user_name}')
             log.info('User %s logged using session' % user_name)
 
         # If we have been able to log in the user (via API or Session)
@@ -190,6 +142,7 @@ class OAuth2Plugin(_OAuth2Plugin, plugins.SingletonPlugin):
             toolkit.g.usertoken_refresh = partial(_refresh_and_save_token, user_name)
         else:
             g.user = None
+            toolkit.g.user = None
             log.warn('The user is not currently logged...')
 
     def get_auth_functions(self):
