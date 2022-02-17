@@ -108,8 +108,6 @@ class OAuth2Plugin(_OAuth2Plugin, plugins.SingletonPlugin):
         apikey = toolkit.request.headers.get(self.authorization_header, '')
         user_name = None
 
-        # log.debug(f'apikey: {apikey}')
-        # log.debug(f'headers: {toolkit.request.headers}')
 
         if self.authorization_header == "authorization":
             if apikey.startswith('Bearer '):
@@ -120,7 +118,6 @@ class OAuth2Plugin(_OAuth2Plugin, plugins.SingletonPlugin):
         # This API Key is not the one of CKAN, it's the one provided by the OAuth2 Service
         if apikey:
             try:
-                # log.debug(f'api_key: {apikey}')
                 token = {'access_token': apikey}
                 user_name = self.oauth2helper.identify(token)
                 log.debug(f'user_name1: {user_name}')

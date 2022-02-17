@@ -46,7 +46,7 @@ ckan.oauth2.authorization_header = OAUTH2_HEADER
 > ckan.oauth2.authorization_header = Authorization
 > ```
 >
-> And this is an theme for using Google as OAuth2 provider:
+> And this is an example for using Google as OAuth2 provider:
 >
 > ```
 > ## OAuth2 configuration

@@ -19,8 +19,6 @@
 # along with OAuth2 CKAN Extension.  If not, see <http://www.gnu.org/licenses/>.
 
 
-# from __future__ import unicode_literals
-
 import base64
 import ckan.model as model
 from ckanext.oauth2.db import UserToken
@@ -115,17 +113,11 @@ class OAuth2Helper(object):
             )
 
         try:
-            # log.debug(f'self.token_endpoint: {self.token_endpoint}')
-            # log.debug(f'headers: {headers}')
             log.debug(f'authorization_response: {toolkit.request.url}')
-            # log.debug(f'client_secret: {self.client_secret}')
             token = oauth.fetch_token(self.token_endpoint,
                                       client_id=self.client_id,
                                       client_secret=self.client_secret,
                                       authorization_response=toolkit.request.url.replace('http:', 'https:', 1))
-                                    #   verify=self.verify_https
-                                    #   headers=headers,
-            # log.debug(f'token: {token}')
         except requests.exceptions.SSLError as e:
             # TODO search a better way to detect invalid certificates
             if "verify failed" in six.text_type(e):
@@ -135,8 +127,6 @@ class OAuth2Helper(object):
         return token
 
     def identify(self, token):
-
-        # log.debug(f'token:{token["access_token"]}')
         if self.jwt_enable:
             log.debug('jwt_enabled')
             access_token = bytes(token['access_token'])
@@ -245,7 +235,6 @@ class OAuth2Helper(object):
 
 
     def get_stored_token(self, user_name):
-        # log.debug(f'user_name: {user_name}')
         user_token = db.UserToken.by_user_name(user_name=user_name)
         if user_token:
             return {
