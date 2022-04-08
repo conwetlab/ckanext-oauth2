@@ -90,7 +90,6 @@ class OAuth2Helper(object):
     def challenge(self, came_from_url):
         # This function is called by the log in function when the user is not logged in
         state = generate_state(came_from_url)
-        # log.debug(f'redirect uri: {self.redirect_uri}')
         oauth = OAuth2Session(self.client_id, redirect_uri=self.redirect_uri, scope=self.scope, state=state)
         auth_url, _ = oauth.authorization_url(self.authorization_endpoint)
         log.debug('Challenge: Redirecting challenge to page {0}'.format(auth_url))
@@ -137,11 +136,9 @@ class OAuth2Helper(object):
             try:
                 if self.legacy_idm:
                     profile_response = requests.get(self.profile_api_url + '?access_token=%s' % token['access_token'], verify=self.verify_https)
-                    log.debug(f'profile response: {profile_response}')
                 else:
                     oauth = OAuth2Session(self.client_id, token=token)
                     profile_response = oauth.get(self.profile_api_url)
-                    log.debug(f'profile response_: {profile_response}')
 
             except requests.exceptions.SSLError as e:
                 log.debug('exception identify oauth2')

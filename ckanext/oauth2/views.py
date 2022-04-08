@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import logging
 from flask import Blueprint, jsonify, make_response
 import logging
@@ -84,7 +82,6 @@ def callback():
         redirect_url = '/' if redirect_url == constants.INITIAL_PAGE else redirect_url
         response.location = redirect_url
         helpers.flash_error(error_description)
-        # make_response((content, 302, headers))
     return response
 
 def get_blueprints():

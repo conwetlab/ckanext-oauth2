@@ -67,7 +67,7 @@ setup(
     url='https://github.com/conwetlab/ckanext-oauth2',
     download_url='https://github.com/conwetlab/ckanext-oauth2/tarball/v' + __version__,
     license='',
-    packages=find_packages(exclude=['ez_setup', 'themes', 'tests']),
+    packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
     namespace_packages=['ckanext'],
     include_package_data=True,
     zip_safe=False,
@@ -88,9 +88,6 @@ setup(
             'oauth2 = ckanext.oauth2.plugin:OAuth2Plugin',
         ]
     },
-        # 'nose.plugins': [
-        #     'pylons = pylons.test:PylonsPlugin'
-        # ]
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Environment :: Web Environment",

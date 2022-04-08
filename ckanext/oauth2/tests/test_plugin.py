@@ -26,7 +26,7 @@ from parameterized import parameterized
 
 CUSTOM_AUTHORIZATION_HEADER = 'x-auth-token'
 OAUTH2_AUTHORIZATION_HEADER = 'authorization'
-HOST = 'ckan.theme.org'
+HOST = 'ckan.example.org'
 
 
 class PluginTest(unittest.TestCase):

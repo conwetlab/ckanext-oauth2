@@ -18,12 +18,7 @@
 # along with OAuth2 CKAN Extension.  If not, see <http://www.gnu.org/licenses/>.
 
 import sqlalchemy as sa
-import ckan.model.meta as meta
-import logging
-from ckan.model.domain_object import DomainObject
 from sqlalchemy.ext.declarative import declarative_base
-
-log = logging.getLogger(__name__)
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -54,5 +49,3 @@ def init_db(model):
         user_token_table.create(checkfirst=True)
 
         model.meta.mapper(UserToken, user_token_table)
-
-

@@ -18,8 +18,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OAuth2 CKAN Extension.  If not, see <http://www.gnu.org/licenses/>.
 
-# from __future__ import unicode_literals
-
 import logging
 from .oauth2 import *
 import os
