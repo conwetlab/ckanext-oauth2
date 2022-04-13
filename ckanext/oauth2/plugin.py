@@ -99,7 +99,12 @@ class OAuth2Plugin(plugins.SingletonPlugin):
     def before_map(self, m):
         log.debug('Setting up the redirections to the OAuth2 service')
 
-        m.connect('/user/login',
+        if self.enable_ckan_auth:
+            base = '/oauth2'
+        else:
+            base = ''
+
+        m.connect(base+'/user/login',
                   controller='ckanext.oauth2.controller:OAuth2Controller',
                   action='login')
 
@@ -111,15 +116,15 @@ class OAuth2Plugin(plugins.SingletonPlugin):
 
         # Redirect the user to the OAuth service register page
         if self.register_url:
-            m.redirect('/user/register', self.register_url)
+            m.redirect(base+'/user/register', self.register_url)
 
         # Redirect the user to the OAuth service reset page
         if self.reset_url:
-            m.redirect('/user/reset', self.reset_url)
+            m.redirect(base+'/user/reset', self.reset_url)
 
         # Redirect the user to the OAuth service reset page
         if self.edit_url:
-            m.redirect('/user/edit/{user}', self.edit_url)
+            m.redirect(base+'/user/edit/{user}', self.edit_url)
 
         return m
 
@@ -179,6 +184,7 @@ class OAuth2Plugin(plugins.SingletonPlugin):
         self.reset_url = os.environ.get("CKAN_OAUTH2_RESET_URL", config.get('ckan.oauth2.reset_url', None))
         self.edit_url = os.environ.get("CKAN_OAUTH2_EDIT_URL", config.get('ckan.oauth2.edit_url', None))
         self.authorization_header = os.environ.get("CKAN_OAUTH2_AUTHORIZATION_HEADER", config.get('ckan.oauth2.authorization_header', 'Authorization')).lower()
+        self.enable_ckan_auth = os.environ.get("CKAN_OAUTH2_ENABLE_CKAN_AUTH", config.get('ckan.oauth2.enable_ckan_auth', False))
 
         # Add this plugin's templates dir to CKAN's extra_template_paths, so
         # that CKAN will use this plugin's custom templates.

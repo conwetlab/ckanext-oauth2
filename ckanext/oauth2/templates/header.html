@@ -1,8 +1,6 @@
 {% ckan_extends %}
 
-{% if header_account_notlogged is defined %}
-    {% block header_account_notlogged %}
-    <li>{% link_for _('Log in'), controller='user', action='login' %}</li>
-    <li>{% link_for _('Register'), controller='user', action='register', class_='sub' %}</li>
-    {% endblock %}
-{% endif %}
+{% block header_account_notlogged %}
+<li>{% link_for _('OAuth Log in'), named_route='oauth2.login' %}</li>
+{{ super() }}
+{% endblock %}
