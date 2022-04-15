@@ -63,9 +63,13 @@ def request_reset(context, data_dict):
     return _no_permissions(context, msg)
 
 
-class _OAuth2Plugin(plugins.SingletonPlugin):
+class OAuth2Plugin(plugins.SingletonPlugin):
+    plugins.implements(plugins.IAuthenticator, inherit=True)
+    plugins.implements(plugins.IAuthFunctions, inherit=True)
+    plugins.implements(plugins.IConfigurer)
     plugins.implements(plugins.IBlueprint)
     plugins.implements(plugins.IClick)
+    plugins.implements(plugins.IRoutes)
 
     # IBlueprint
 
@@ -76,13 +80,6 @@ class _OAuth2Plugin(plugins.SingletonPlugin):
 
     def get_commands(self):
         return get_commands()
-
-
-class OAuth2Plugin(_OAuth2Plugin, plugins.SingletonPlugin):
-    plugins.implements(plugins.IAuthenticator, inherit=True)
-    plugins.implements(plugins.IAuthFunctions, inherit=True)
-    # plugins.implements(plugins.IRoutes, inherit=True)
-    plugins.implements(plugins.IConfigurer)
 
 
     def __init__(self, name=None):
@@ -160,3 +157,31 @@ class OAuth2Plugin(_OAuth2Plugin, plugins.SingletonPlugin):
         # Add this plugin's templates dir to CKAN's extra_template_paths, so
         # that CKAN will use this plugin's custom templates.
         plugins.toolkit.add_template_directory(config, 'templates')
+
+
+    def before_map(self, m):
+        log.debug('Setting up the redirections to the OAuth2 service')
+
+        m.connect('/user/login',
+                  controller='ckanext.oauth2.controller:OAuth2Controller',
+                  action='login')
+
+        # We need to handle petitions received to the Callback URL
+        # since some error can arise and we need to process them
+        m.connect('/oauth2/callback',
+                  controller='ckanext.oauth2.controller:OAuth2Controller',
+                  action='callback')
+
+        # Redirect the user to the OAuth service register page
+        if self.register_url:
+            m.redirect('/user/register', self.register_url)
+
+        # Redirect the user to the OAuth service reset page
+        if self.reset_url:
+            m.redirect('/user/reset', self.reset_url)
+
+        # Redirect the user to the OAuth service reset page
+        if self.edit_url:
+            m.redirect('/user/edit/{user}', self.edit_url)
+
+        return m

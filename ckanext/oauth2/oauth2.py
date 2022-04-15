@@ -37,7 +37,7 @@ import six
 
 import jwt
 
-from .constants import *
+from .constants import CAME_FROM_FIELD, REDIRECT_URL
 from flask import Flask, request, redirect, session, url_for, jsonify
 
 

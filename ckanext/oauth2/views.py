@@ -10,8 +10,6 @@ from ckanext.oauth2.oauth2 import OAuth2Helper
 
 log = logging.getLogger(__name__)
 
-log = logging.getLogger(__name__)
-# service_proxy = Blueprint("service_proxy", __name__)
 oauth2 = Blueprint("oauth2", __name__)
 
 oauth2helper = OAuth2Helper()
