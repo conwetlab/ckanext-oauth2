@@ -174,9 +174,9 @@ class PluginTest(unittest.TestCase):
         plugin.toolkit.request.headers = headers
 
         # The identify function must set the user id in this variable
-        plugin.toolkit.c.user = None
-        plugin.toolkit.c.usertoken = None
-        plugin.toolkit.c.usertoken_refresh = None
+        plugin.toolkit.g.user = None
+        plugin.toolkit.g.usertoken = None
+        plugin.toolkit.g.usertoken_refresh = None
 
         # Call the function
         self._plugin.identify()
@@ -191,15 +191,15 @@ class PluginTest(unittest.TestCase):
             self.assertEquals(0, self._plugin.oauth2helper.identify.call_count)
 
         self.assertEquals(expected_user, g_mock.user)
-        self.assertEquals(expected_user, plugin.toolkit.c.user)
+        self.assertEquals(expected_user, plugin.toolkit.g.user)
 
         if expected_user is None:
-            self.assertIsNone(plugin.toolkit.c.usertoken)
-            self.assertIsNone(plugin.toolkit.c.usertoken_refresh)
+            self.assertIsNone(plugin.toolkit.g.usertoken)
+            self.assertIsNone(plugin.toolkit.g.usertoken_refresh)
         else:
-            self.assertEquals(usertoken, plugin.toolkit.c.usertoken)
+            self.assertEquals(usertoken, plugin.toolkit.g.usertoken)
 
             # method 'usertoken_refresh' should relay on the one provided by the repoze.who module
-            plugin.toolkit.c.usertoken_refresh()
+            plugin.toolkit.g.usertoken_refresh()
             self._plugin.oauth2helper.refresh_token.assert_called_once_with(expected_user)
-            self.assertEquals(newtoken, plugin.toolkit.c.usertoken)
+            self.assertEquals(newtoken, plugin.toolkit.g.usertoken)

@@ -18,16 +18,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OAuth2 CKAN Extension.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
-
 import logging
-import constants
+from ckanext.oauth2 import constants
 
 from ckan.common import session
 import ckan.lib.helpers as helpers
 import ckan.lib.base as base
 import ckan.plugins.toolkit as toolkit
-import oauth2
+from ckanext.oauth2 import oauth2
 
 from ckanext.oauth2.plugin import _get_previous_page
 

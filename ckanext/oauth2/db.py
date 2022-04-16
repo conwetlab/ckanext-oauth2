@@ -18,10 +18,12 @@
 # along with OAuth2 CKAN Extension.  If not, see <http://www.gnu.org/licenses/>.
 
 import sqlalchemy as sa
+from sqlalchemy.ext.declarative import declarative_base
+
+Base = declarative_base()
+metadata = Base.metadata
 
 UserToken = None
-
-
 def init_db(model):
 
     global UserToken
