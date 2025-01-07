@@ -20,7 +20,6 @@ ckan.oauth2.profile_api_url = https://YOUR_OAUTH_SERVICE/user
 ckan.oauth2.client_id = YOUR_CLIENT_ID
 ckan.oauth2.client_secret = YOUR_CLIENT_SECRET
 ckan.oauth2.scope = profile other.scope
-ckan.oauth2.rememberer_name = auth_tkt
 ckan.oauth2.profile_api_user_field = JSON_FIELD_TO_FIND_THE_USER_IDENTIFIER
 ckan.oauth2.profile_api_fullname_field = JSON_FIELD_TO_FIND_THE_USER_FULLNAME
 ckan.oauth2.profile_api_mail_field = JSON_FIELD_TO_FIND_THE_USER_MAIL
@@ -73,7 +72,6 @@ You can also use environment variables to configure this plugin, the name of the
 - `CKAN_OAUTH2_CLIENT_ID`
 - `CKAN_OAUTH2_CLIENT_SECRET`
 - `CKAN_OAUTH2_SCOPE`
-- `CKAN_OAUTH2_REMEMBERER_NAME`
 - `CKAN_OAUTH2_PROFILE_API_USER_FIELD`
 - `CKAN_OAUTH2_PROFILE_API_FULLNAME_FIELD`
 - `CKAN_OAUTH2_PROFILE_API_MAIL_FIELD`

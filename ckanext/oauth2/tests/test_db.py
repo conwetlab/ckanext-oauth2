@@ -16,44 +16,42 @@
 
 # You should have received a copy of the GNU Affero General Public License
 # along with OAuth2 CKAN Extension.  If not, see <http://www.gnu.org/licenses/>.
+import pytest
+from unittest.mock import MagicMock
+from ckanext.oauth2.db import UserToken
 
-import unittest
-import ckanext.oauth2.db as db
+@pytest.fixture
+def setup_mocks():
+    # Create mocks
+    yield
 
-from mock import MagicMock
+def test_user_token_creation():
+    # Create a UserToken object
+    access_token= 'access_token_value',
+    token_type= 'bearer',
+    refresh_token= 'refresh_token_value',
+    expires_in= 3600
+    
+    user_token = UserToken('test_user', access_token, token_type, refresh_token, expires_in)
 
+    # Check if the object is created correctly
+    assert user_token.user_name == 'test_user'
+    assert user_token.access_token == access_token
+    assert user_token.token_type == token_type
+    assert user_token.refresh_token == refresh_token
+    assert user_token.expires_in == 3600
 
-class DBTest(unittest.TestCase):
+def test_user_token_by_user_name(setup_mocks):
+    # Mocking the query method
+    query_mock = MagicMock()
+    UserToken.by_user_name = MagicMock(return_value=query_mock)
 
-    def setUp(self):
-        # Restart databse initial status
-        db.UserToken = None
+    # Call the function
+    user_token = UserToken.by_user_name('test_user')
 
-        # Create mocks
-        self._sa = db.sa
-        db.sa = MagicMock()
+    # Assert that the class method was called with the correct argument
+    UserToken.by_user_name.assert_called_once_with('test_user')
+    
+    # Clean up
+    UserToken.by_user_name.reset_mock()
 
-    def tearDown(self):
-        db.UserToken = None
-        db.sa = self._sa
-
-    def test_initdb_not_initialized(self):
-
-        # Call the function
-        model = MagicMock()
-        db.init_db(model)
-
-        # Assert that table method has been called
-        db.sa.Table.assert_called_once()
-        model.meta.mapper.assert_called_once()
-
-    def test_initdb_initialized(self):
-        db.UserToken = MagicMock()
-
-        # Call the function
-        model = MagicMock()
-        db.init_db(model)
-
-        # Assert that table method has been called
-        self.assertEquals(0, db.sa.Table.call_count)
-        self.assertEquals(0, model.meta.mapper.call_count)

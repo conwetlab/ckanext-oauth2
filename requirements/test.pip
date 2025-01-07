@@ -1,5 +1,7 @@
 parameterized
-selenium==3.5.0
 httpretty>=0.6.5
-mock
+pytest-mock
 sure
+pytest==7.3.1
+pytest-factoryboy==2.5.1
+pytest-ckan
