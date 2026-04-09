@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "ckanext-oauth2"
+version = "2.0.0"
+description = "OAuth2 support for CKAN"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "AGPL-3.0-or-later"
+keywords = ["CKAN", "OAuth2"]
+authors = [
+    { name = "Aitor Magán", email = "amagan@conwet.com" },
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP :: Session",
+    "Topic :: Internet :: WWW/HTTP :: WSGI :: Middleware",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Systems Administration :: Authentication/Directory",
+]
+dependencies = [
+    "oauthlib>=3.0",
+    "requests-oauthlib>=1.0",
+    "PyJWT[cryptography]>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "httpretty",
+    "parameterized",
+]
+
+[project.entry-points."ckan.plugins"]
+oauth2 = "ckanext.oauth2.plugin:OAuth2Plugin"
+
+[tool.setuptools.packages.find]
+include = ["ckanext*"]
+
+[tool.pytest.ini_options]
+addopts = "-v"
+testpaths = ["ckanext/oauth2/tests"]

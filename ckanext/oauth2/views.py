@@ -20,55 +20,69 @@
 
 import logging
 
-from flask import Blueprint
+from flask import Blueprint, redirect
 
-from ckan.plugins import toolkit
-from ckan.common import session
+import ckan.model as model
+import ckan.plugins as plugins
+import ckan.plugins.toolkit as toolkit
 import ckan.lib.helpers as helpers
 
 from ckanext.oauth2 import constants
-from ckanext.oauth2.oauth2 import OAuth2Helper, get_came_from
+from ckanext.oauth2.oauth2 import get_came_from
 from ckanext.oauth2.plugin import _get_previous_page
 
 
 log = logging.getLogger(__name__)
 
-oauth2_blueprint = Blueprint('oauth2', __name__)
+oauth2 = Blueprint('oauth2', __name__)
 
 
+def get_blueprints():
+    return [oauth2]
+
+
+def _get_oauth2helper():
+    """Get OAuth2Helper from the loaded plugin singleton."""
+    plugin = plugins.get_plugin('oauth2')
+    return plugin.oauth2helper
+
+
+@oauth2.route('/user/login')
 def login():
     log.debug('login')
-
-    # Get the page where the user was when the login attempt was fired
     came_from_url = _get_previous_page(constants.INITIAL_PAGE)
-
-    oauth2helper = OAuth2Helper()
-    return oauth2helper.challenge(came_from_url)
+    return _get_oauth2helper().challenge(came_from_url)
 
 
+@oauth2.route('/oauth2/callback')
 def callback():
     try:
-        oauth2helper = OAuth2Helper()
+        oauth2helper = _get_oauth2helper()
         token = oauth2helper.get_token()
-        user_name = oauth2helper.identify(token)
-        oauth2helper.remember(user_name)
+        user_name, user_obj = oauth2helper.identify(token)
+        oauth2helper.log_user_into_ckan(user_obj)
         oauth2helper.update_token(user_name, token)
-        return oauth2helper.redirect_from_callback()
+        response = oauth2helper.redirect_from_callback()
     except Exception as e:
-        session.save()
+        model.Session.rollback()
 
-        # If the callback is called with an error, we must show the message
         error_description = toolkit.request.args.get('error_description')
         if not error_description:
-            error_description = str(e) if str(e) else type(e).__name__
+            if str(e):
+                error_description = str(e)
+            elif hasattr(e, 'description') and e.description:
+                error_description = e.description
+            elif hasattr(e, 'error') and e.error:
+                error_description = e.error
+            else:
+                error_description = type(e).__name__
 
-        state = toolkit.request.args.get('state', '')
-        redirect_url = get_came_from(state) if state else '/'
+        log.error('login error: %s', error_description)
+
+        redirect_url = get_came_from(toolkit.request.args.get('state'))
         if redirect_url == constants.INITIAL_PAGE:
             redirect_url = '/'
+        response = redirect(redirect_url)
         helpers.flash_error(error_description)
-        return toolkit.redirect_to(redirect_url)
 
-
-oauth2_blueprint.add_url_rule('/user/login', view_func=login)
-oauth2_blueprint.add_url_rule('/oauth2/callback', view_func=callback)
+    return response

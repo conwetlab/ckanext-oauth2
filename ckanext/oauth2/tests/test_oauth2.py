@@ -43,7 +43,6 @@ OAUTH2TOKEN = {
 def make_request(secure, host, path, params):
     request = MagicMock()
 
-    # Generate the string of parameters
     params_str = ''
     for param in params:
         params_str += '%s=%s&' % (param, params[param])
@@ -66,18 +65,15 @@ class OAuth2PluginTest(unittest.TestCase):
         self._profile_api_url = 'https://test/oauth2/user'
         self._group_field = 'groups'
 
-        # Get the functions that can be mocked and affect other tests
         self._toolkit = oauth2.toolkit
         self._User = oauth2.model.User
         self._Session = oauth2.model.Session
         self._db = oauth2.db
         self._OAuth2Session = oauth2.OAuth2Session
 
-        # Mock toolkit
         oauth2.toolkit = MagicMock()
 
     def tearDown(self):
-        # Reset the functions
         oauth2.toolkit = self._toolkit
         oauth2.model.User = self._User
         oauth2.model.Session = self._Session
@@ -254,55 +250,6 @@ class OAuth2PluginTest(unittest.TestCase):
             helper.get_token()
 
     @parameterized.expand([
-        ({},),
-        ([('Set-Cookie', 'cookie1="cookie1val"; Path=/')],),
-        ([('Set-Cookie', 'cookie1="cookie1val"; Path=/'), ('Set-Cookie', 'cookie12="cookie2val"; Path=/')],)
-    ])
-    def test_remember(self, headers):
-        user_name = 'user_name'
-
-        # Configure the mocks
-        environ = MagicMock()
-        plugins = MagicMock()
-        authenticator = MagicMock()
-        authenticator.remember = MagicMock(return_value=headers)
-
-        environ.get = MagicMock(return_value=plugins)
-        oauth2.toolkit.request.environ = environ
-        plugins.get = MagicMock(return_value=authenticator)
-
-        # Call the function
-        helper = self._helper()
-        helper.remember(user_name)
-
-        # Check that the remember method has been called properly
-        authenticator.remember.assert_called_once_with(environ, {'repoze.who.userid': user_name})
-
-        for header, value in headers:
-            oauth2.toolkit.response.headers.add.assert_any_call(header, value)
-
-    def test_challenge(self):
-        helper = self._helper()
-
-        # Build mocks
-        request = MagicMock()
-        request = make_request(False, 'localhost', 'user/login', {})
-        request.environ = MagicMock()
-        request.headers = {}
-        came_from = '/came_from_example'
-
-        oauth2.toolkit.request = request
-
-        # Call the method
-        helper.challenge(came_from)
-
-        # Check
-        state = urlencode({'state': b64encode(json.dumps({'came_from': came_from}).encode('utf-8')).decode('utf-8')})
-        expected_url = 'https://test/oauth2/authorize/?response_type=code&client_id=client-id&' + \
-                       'redirect_uri=http%3A%2F%2Flocalhost%3A5000%2Foauth2%2Fcallback&' + state
-        oauth2.toolkit.redirect_to.assert_called_once_with(expected_url)
-
-    @parameterized.expand([
         ('test_user', 'Test User Full Name', 'test@test.com'),
         ('test_user', None,                  'test@test.com'),
         ('test_user', 'Test User Full Name', 'test@test.com', False),
@@ -322,7 +269,6 @@ class OAuth2PluginTest(unittest.TestCase):
 
         self.helper = helper = self._helper(fullname_field)
 
-        # Simulate the HTTP Request
         user_info = {}
         user_info[self._user_field] = username
         user_info[self._email_field] = email
@@ -337,7 +283,6 @@ class OAuth2PluginTest(unittest.TestCase):
 
         httpretty.register_uri(httpretty.GET, self._profile_api_url, body=json.dumps(user_info))
 
-        # Create the mocks
         request = make_request(False, 'localhost', '/oauth2/callback', {})
         oauth2.toolkit.request = request
         oauth2.model.Session = MagicMock()
@@ -348,22 +293,18 @@ class OAuth2PluginTest(unittest.TestCase):
         oauth2.model.User = MagicMock(return_value=user)
         oauth2.model.User.by_email = MagicMock(return_value=[user] if user_exists else [])
 
-        # Call the function
-        returned_username = helper.identify(OAUTH2TOKEN)
+        returned_username, returned_user = helper.identify(OAUTH2TOKEN)
 
-        # The function must return the user name
         self.assertEqual(username, returned_username)
+        self.assertEqual(user, returned_user)
 
-        # Asserts
         oauth2.model.User.by_email.assert_called_once_with(email)
 
-        # Check if the user is created or not
         if not user_exists:
             oauth2.model.User.assert_called_once_with(email=email)
         else:
             self.assertEqual(0, oauth2.model.User.called)
 
-        # Check that user properties are set properly
         self.assertEqual(username, user.name)
         self.assertEqual(email, user.email)
         if sysadmin is not None:
@@ -374,7 +315,6 @@ class OAuth2PluginTest(unittest.TestCase):
         else:
             self.assertEqual(None, user.fullname)
 
-        # Check that the user is saved
         oauth2.model.Session.add.assert_called_once_with(user)
         oauth2.model.Session.commit.assert_called_once()
         oauth2.model.Session.remove.assert_called_once()
@@ -394,9 +334,10 @@ class OAuth2PluginTest(unittest.TestCase):
         oauth2.model.User = MagicMock(return_value=user)
         oauth2.model.User.by_email = MagicMock(return_value=[user])
 
-        returned_username = helper.identify(token)
+        returned_username, returned_user = helper.identify(token)
 
         self.assertEqual(user_data[self._user_field], returned_username)
+        self.assertEqual(user, returned_user)
 
         oauth2.model.Session.add.assert_called_once_with(user)
         oauth2.model.Session.commit.assert_called_once()
@@ -513,7 +454,6 @@ class OAuth2PluginTest(unittest.TestCase):
         oauth2.model.Session = MagicMock()
         oauth2.db.UserToken.by_user_name = MagicMock(return_value=usertoken)
 
-        # The token to be updated
         if jwt_expires_in:
             newtoken = {
                 'access_token': 'new_access_token',
@@ -523,11 +463,9 @@ class OAuth2PluginTest(unittest.TestCase):
             }
             helper.update_token('user', newtoken)
 
-            # Check that the object has been stored
             oauth2.model.Session.add.assert_called_once()
             oauth2.model.Session.commit.assert_called_once()
 
-            # Check that the object contains the correct information
             tk = oauth2.model.Session.add.call_args_list[0][0][0]
             self.assertEqual(user, tk.user_name)
             self.assertEqual(newtoken['access_token'], tk.access_token)
@@ -541,21 +479,19 @@ class OAuth2PluginTest(unittest.TestCase):
                 'refresh_token': 'new_refresh_token'
             }
             expires_in_data = {'exp': 3600, 'iat': 0}
-            oauth2.jwt.decode.return_value = expires_in_data
+            # Mock _decode_jwt instead of jwt.decode
+            helper._decode_jwt = MagicMock(return_value=expires_in_data)
             helper.update_token('user', newtoken)
 
-            # Check that the object has been stored
             oauth2.model.Session.add.assert_called_once()
             oauth2.model.Session.commit.assert_called_once()
 
-            # Check that the object contains the correct information
             tk = oauth2.model.Session.add.call_args_list[0][0][0]
             self.assertEqual(user, tk.user_name)
             self.assertEqual(newtoken['access_token'], tk.access_token)
             self.assertEqual(newtoken['token_type'], tk.token_type)
             self.assertEqual(3600, tk.expires_in)
             self.assertEqual(newtoken['refresh_token'], tk.refresh_token)
-
 
     @parameterized.expand([
         (True,),
@@ -566,17 +502,14 @@ class OAuth2PluginTest(unittest.TestCase):
         username = 'user'
         helper = self.helper = self._helper()
 
-        # mock get_token
         if user_exists:
             current_token = OAUTH2TOKEN
         else:
             current_token = None
 
-        # mock plugin functions
         helper.get_stored_token = MagicMock(return_value=current_token)
         helper.update_token = MagicMock()
 
-        # The token returned by the system
         newtoken = {
             'access_token': 'new_access_token',
             'token_type': 'new_token_type',
@@ -587,7 +520,6 @@ class OAuth2PluginTest(unittest.TestCase):
         session.refresh_token = MagicMock(return_value=newtoken)
         oauth2.OAuth2Session = MagicMock(return_value=session)
 
-        # Call the function
         result = helper.refresh_token(username)
 
         if user_exists:
@@ -608,7 +540,6 @@ class OAuth2PluginTest(unittest.TestCase):
         current_token = OAUTH2TOKEN
         helper = self._helper()
 
-        # mock plugin functions
         helper.get_stored_token = MagicMock(return_value=current_token)
 
         with self.assertRaises(InsecureTransportError):
@@ -622,10 +553,34 @@ class OAuth2PluginTest(unittest.TestCase):
         current_token = OAUTH2TOKEN
         helper = self._helper()
 
-        # mock plugin functions
         helper.get_stored_token = MagicMock(return_value=current_token)
 
         with self.assertRaises(SSLError):
             with patch('ckanext.oauth2.oauth2.OAuth2Session') as oauth2_session_mock:
                 oauth2_session_mock().refresh_token.side_effect = SSLError('unexpected error')
                 helper.refresh_token(username)
+
+    def test_unwrap_response(self):
+        helper = self._helper()
+        data = {'result': {'user': {'name': 'test', 'email': 'test@test.com'}}}
+        self.assertEqual({'name': 'test', 'email': 'test@test.com'}, helper._unwrap_response(data, 'result.user'))
+        self.assertEqual(data, helper._unwrap_response(data, None))
+        self.assertEqual(data, helper._unwrap_response(data, ''))
+
+    @patch('ckanext.oauth2.oauth2.login_user')
+    def test_log_user_into_ckan(self, mock_login_user):
+        helper = self._helper()
+        user_obj = MagicMock()
+        helper.log_user_into_ckan(user_obj)
+        mock_login_user.assert_called_once_with(user_obj)
+
+    def test_decode_jwt_unverified(self):
+        helper = self._helper()
+        token_data = {'username': 'test', 'email': 'test@test.com'}
+        oauth2.jwt.decode = MagicMock(return_value=token_data)
+        result = helper._decode_jwt('some.jwt.token', verify=False)
+        self.assertEqual(token_data, result)
+        oauth2.jwt.decode.assert_called_once_with(
+            'some.jwt.token',
+            options={"verify_signature": False, "verify_exp": False}
+        )

@@ -1,3 +1,0 @@
-parameterized
-httpretty>=0.6.5
-pytest

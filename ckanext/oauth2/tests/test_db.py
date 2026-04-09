@@ -20,7 +20,7 @@
 import unittest
 import ckanext.oauth2.db as db
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 
 class DBTest(unittest.TestCase):
@@ -33,31 +33,36 @@ class DBTest(unittest.TestCase):
         self._sa = db.sa
         db.sa = MagicMock()
 
-        self._orm = db.orm
-        db.orm = MagicMock()
+        self._model = db.model
+        db.model = MagicMock()
+
+        self._domain_object = db.domain_object
+        db.domain_object = MagicMock()
+
+        self._mapper_registry = db._mapper_registry
+        db._mapper_registry = MagicMock()
 
     def tearDown(self):
         db.UserToken = None
         db.sa = self._sa
-        db.orm = self._orm
+        db.model = self._model
+        db.domain_object = self._domain_object
+        db._mapper_registry = self._mapper_registry
 
     def test_initdb_not_initialized(self):
-
         # Call the function
-        model = MagicMock()
-        db.init_db(model)
+        db.init_db()
 
-        # Assert that table method has been called
+        # Assert that table and map_imperatively have been called
         db.sa.Table.assert_called_once()
-        model.meta.mapper.assert_called_once()
+        db._mapper_registry.map_imperatively.assert_called_once()
 
     def test_initdb_initialized(self):
         db.UserToken = MagicMock()
 
         # Call the function
-        model = MagicMock()
-        db.init_db(model)
+        db.init_db()
 
-        # Assert that table method has been called
+        # Assert that table method has NOT been called
         self.assertEqual(0, db.sa.Table.call_count)
-        self.assertEqual(0, model.meta.mapper.call_count)
+        self.assertEqual(0, db._mapper_registry.map_imperatively.call_count)
