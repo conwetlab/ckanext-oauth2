@@ -21,7 +21,7 @@
 import unittest
 import ckanext.oauth2.plugin as plugin
 
-from mock import MagicMock, patch
+from unittest.mock import MagicMock, patch
 from parameterized import parameterized
 
 CUSTOM_AUTHORIZATION_HEADER = 'x-auth-token'
@@ -33,13 +33,12 @@ class PluginTest(unittest.TestCase):
 
     def setUp(self):
         # Save functions and mock them
-
         self._toolkit = plugin.toolkit
         plugin.toolkit = MagicMock()
         plugin.toolkit.config = {'ckan.oauth2.authorization_header': OAUTH2_AUTHORIZATION_HEADER}
 
-        self._oauth2 = plugin.oauth2
-        plugin.oauth2 = MagicMock()
+        self._oauth2_helper = plugin.oauth2_helper
+        plugin.oauth2_helper = MagicMock()
 
         # Create the plugin
         self._plugin = plugin.OAuth2Plugin()
@@ -48,55 +47,18 @@ class PluginTest(unittest.TestCase):
     def tearDown(self):
         # Unmock functions
         plugin.toolkit = self._toolkit
+        plugin.oauth2_helper = self._oauth2_helper
 
     def _set_identity(self, identity):
         plugin.toolkit.request.environ = {}
         if identity:
             plugin.toolkit.request.environ['repoze.who.identity'] = {'repoze.who.userid': identity}
 
-    @parameterized.expand([
-        (),
-        ('a'),
-        (None, 'a',),
-        (None, None, 'a'),
-        ('a', 'b', 'c')
-    ])
-    def test_before_map(self, register_url=None, reset_url=None, edit_url=None):
-
-        # Setup the config dictionary
-        plugin.toolkit.config = {}
-
-        if register_url:
-            plugin.toolkit.config['ckan.oauth2.register_url'] = register_url
-
-        if reset_url:
-            plugin.toolkit.config['ckan.oauth2.reset_url'] = reset_url
-
-        if edit_url:
-            plugin.toolkit.config['ckan.oauth2.edit_url'] = edit_url
-
-        self._plugin.update_config(plugin.toolkit.config)
-
-        # In this case we need a own instance of the plugin, so we create it
-        self._plugin = plugin.OAuth2Plugin()
-
-        # Create the mapper (mock) and call the function
-        mapper = MagicMock()
-        self._plugin.before_map(mapper)
-
-        # Check that the mapper has been called correctly
-        mapper.connect.assert_called_with('/oauth2/callback',
-                                          controller='ckanext.oauth2.controller:OAuth2Controller',
-                                          action='callback')
-
-        if register_url:
-            mapper.redirect.assert_any_call('/user/register', register_url)
-
-        if reset_url:
-            mapper.redirect.assert_any_call('/user/reset', reset_url)
-
-        if edit_url:
-            mapper.redirect.assert_any_call('/user/edit/{user}', edit_url)
+    def test_get_blueprint(self):
+        # Test that get_blueprint returns a list with the blueprint
+        blueprints = self._plugin.get_blueprint()
+        self.assertIsInstance(blueprints, list)
+        self.assertEqual(len(blueprints), 1)
 
     def test_auth_functions(self):
 
@@ -108,7 +70,7 @@ class PluginTest(unittest.TestCase):
             self.assertIn(auth_function, EXPECTED_AUTH_FUNCTIONS)
             function_result = auth_functions[auth_function]({'user': 'test'}, {})
             self.assertIn('success', function_result)
-            self.assertEquals(False, function_result['success'])
+            self.assertEqual(False, function_result['success'])
 
     @parameterized.expand([
         ({},                                              None,                      None,    None,    False),
@@ -173,11 +135,6 @@ class PluginTest(unittest.TestCase):
         # Authentication header is not included
         plugin.toolkit.request.headers = headers
 
-        # The identify function must set the user id in this variable
-        plugin.toolkit.c.user = None
-        plugin.toolkit.c.usertoken = None
-        plugin.toolkit.c.usertoken_refresh = None
-
         # Call the function
         self._plugin.identify()
 
@@ -188,18 +145,16 @@ class PluginTest(unittest.TestCase):
         elif not oauth2 and CUSTOM_AUTHORIZATION_HEADER in headers:
             self._plugin.oauth2helper.identify.assert_called_once_with({'access_token': headers[CUSTOM_AUTHORIZATION_HEADER]})
         else:
-            self.assertEquals(0, self._plugin.oauth2helper.identify.call_count)
+            self.assertEqual(0, self._plugin.oauth2helper.identify.call_count)
 
-        self.assertEquals(expected_user, g_mock.user)
-        self.assertEquals(expected_user, plugin.toolkit.c.user)
+        self.assertEqual(expected_user, g_mock.user)
 
         if expected_user is None:
-            self.assertIsNone(plugin.toolkit.c.usertoken)
-            self.assertIsNone(plugin.toolkit.c.usertoken_refresh)
+            self.assertFalse(hasattr(g_mock, 'usertoken') and g_mock.usertoken is not None)
         else:
-            self.assertEquals(usertoken, plugin.toolkit.c.usertoken)
+            self.assertEqual(usertoken, g_mock.usertoken)
 
             # method 'usertoken_refresh' should relay on the one provided by the repoze.who module
-            plugin.toolkit.c.usertoken_refresh()
+            g_mock.usertoken_refresh()
             self._plugin.oauth2helper.refresh_token.assert_called_once_with(expected_user)
-            self.assertEquals(newtoken, plugin.toolkit.c.usertoken)
+            self.assertEqual(newtoken, g_mock.usertoken)

@@ -19,36 +19,35 @@
 # along with OAuth2 CKAN Extension.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from __future__ import unicode_literals
-
 import base64
 import ckan.model as model
-import db
 import json
 import logging
-from six.moves.urllib.parse import urljoin
 import os
-
 from base64 import b64encode, b64decode
+from urllib.parse import urljoin
+
 from ckan.plugins import toolkit
 from oauthlib.oauth2 import InsecureTransportError
 import requests
 from requests_oauthlib import OAuth2Session
-import six
 
 import jwt
 
-import constants
+from ckanext.oauth2 import constants
+from ckanext.oauth2 import db
 
 
 log = logging.getLogger(__name__)
 
 
 def generate_state(url):
-    return b64encode(bytes(json.dumps({constants.CAME_FROM_FIELD: url})))
+    return b64encode(json.dumps({constants.CAME_FROM_FIELD: url}).encode('utf-8')).decode('utf-8')
 
 
 def get_came_from(state):
+    if isinstance(state, str):
+        state = state.encode('utf-8')
     return json.loads(b64decode(state)).get(constants.CAME_FROM_FIELD, '/')
 
 
@@ -63,21 +62,21 @@ class OAuth2Helper(object):
         if self.verify_https and os.environ.get("REQUESTS_CA_BUNDLE", "").strip() != "":
             self.verify_https = os.environ["REQUESTS_CA_BUNDLE"].strip()
 
-        self.jwt_enable = six.text_type(os.environ.get('CKAN_OAUTH2_JWT_ENABLE', toolkit.config.get('ckan.oauth2.jwt.enable',''))).strip().lower() in ("true", "1", "on")
+        self.jwt_enable = str(os.environ.get('CKAN_OAUTH2_JWT_ENABLE', toolkit.config.get('ckan.oauth2.jwt.enable', ''))).strip().lower() in ("true", "1", "on")
 
-        self.legacy_idm = six.text_type(os.environ.get('CKAN_OAUTH2_LEGACY_IDM', toolkit.config.get('ckan.oauth2.legacy_idm', ''))).strip().lower() in ("true", "1", "on")
-        self.authorization_endpoint = six.text_type(os.environ.get('CKAN_OAUTH2_AUTHORIZATION_ENDPOINT', toolkit.config.get('ckan.oauth2.authorization_endpoint', ''))).strip()
-        self.token_endpoint = six.text_type(os.environ.get('CKAN_OAUTH2_TOKEN_ENDPOINT', toolkit.config.get('ckan.oauth2.token_endpoint', ''))).strip()
-        self.profile_api_url = six.text_type(os.environ.get('CKAN_OAUTH2_PROFILE_API_URL', toolkit.config.get('ckan.oauth2.profile_api_url', ''))).strip()
-        self.client_id = six.text_type(os.environ.get('CKAN_OAUTH2_CLIENT_ID', toolkit.config.get('ckan.oauth2.client_id', ''))).strip()
-        self.client_secret = six.text_type(os.environ.get('CKAN_OAUTH2_CLIENT_SECRET', toolkit.config.get('ckan.oauth2.client_secret', ''))).strip()
-        self.scope = six.text_type(os.environ.get('CKAN_OAUTH2_SCOPE', toolkit.config.get('ckan.oauth2.scope', ''))).strip()
-        self.rememberer_name = six.text_type(os.environ.get('CKAN_OAUTH2_REMEMBER_NAME', toolkit.config.get('ckan.oauth2.rememberer_name', 'auth_tkt'))).strip()
-        self.profile_api_user_field = six.text_type(os.environ.get('CKAN_OAUTH2_PROFILE_API_USER_FIELD', toolkit.config.get('ckan.oauth2.profile_api_user_field', ''))).strip()
-        self.profile_api_fullname_field = six.text_type(os.environ.get('CKAN_OAUTH2_PROFILE_API_FULLNAME_FIELD', toolkit.config.get('ckan.oauth2.profile_api_fullname_field', ''))).strip()
-        self.profile_api_mail_field = six.text_type(os.environ.get('CKAN_OAUTH2_PROFILE_API_MAIL_FIELD', toolkit.config.get('ckan.oauth2.profile_api_mail_field', ''))).strip()
-        self.profile_api_groupmembership_field = six.text_type(os.environ.get('CKAN_OAUTH2_PROFILE_API_GROUPMEMBERSHIP_FIELD', toolkit.config.get('ckan.oauth2.profile_api_groupmembership_field', ''))).strip()
-        self.sysadmin_group_name = six.text_type(os.environ.get('CKAN_OAUTH2_SYSADMIN_GROUP_NAME', toolkit.config.get('ckan.oauth2.sysadmin_group_name', ''))).strip()
+        self.legacy_idm = str(os.environ.get('CKAN_OAUTH2_LEGACY_IDM', toolkit.config.get('ckan.oauth2.legacy_idm', ''))).strip().lower() in ("true", "1", "on")
+        self.authorization_endpoint = str(os.environ.get('CKAN_OAUTH2_AUTHORIZATION_ENDPOINT', toolkit.config.get('ckan.oauth2.authorization_endpoint', ''))).strip()
+        self.token_endpoint = str(os.environ.get('CKAN_OAUTH2_TOKEN_ENDPOINT', toolkit.config.get('ckan.oauth2.token_endpoint', ''))).strip()
+        self.profile_api_url = str(os.environ.get('CKAN_OAUTH2_PROFILE_API_URL', toolkit.config.get('ckan.oauth2.profile_api_url', ''))).strip()
+        self.client_id = str(os.environ.get('CKAN_OAUTH2_CLIENT_ID', toolkit.config.get('ckan.oauth2.client_id', ''))).strip()
+        self.client_secret = str(os.environ.get('CKAN_OAUTH2_CLIENT_SECRET', toolkit.config.get('ckan.oauth2.client_secret', ''))).strip()
+        self.scope = str(os.environ.get('CKAN_OAUTH2_SCOPE', toolkit.config.get('ckan.oauth2.scope', ''))).strip()
+        self.rememberer_name = str(os.environ.get('CKAN_OAUTH2_REMEMBER_NAME', toolkit.config.get('ckan.oauth2.rememberer_name', 'auth_tkt'))).strip()
+        self.profile_api_user_field = str(os.environ.get('CKAN_OAUTH2_PROFILE_API_USER_FIELD', toolkit.config.get('ckan.oauth2.profile_api_user_field', ''))).strip()
+        self.profile_api_fullname_field = str(os.environ.get('CKAN_OAUTH2_PROFILE_API_FULLNAME_FIELD', toolkit.config.get('ckan.oauth2.profile_api_fullname_field', ''))).strip()
+        self.profile_api_mail_field = str(os.environ.get('CKAN_OAUTH2_PROFILE_API_MAIL_FIELD', toolkit.config.get('ckan.oauth2.profile_api_mail_field', ''))).strip()
+        self.profile_api_groupmembership_field = str(os.environ.get('CKAN_OAUTH2_PROFILE_API_GROUPMEMBERSHIP_FIELD', toolkit.config.get('ckan.oauth2.profile_api_groupmembership_field', ''))).strip()
+        self.sysadmin_group_name = str(os.environ.get('CKAN_OAUTH2_SYSADMIN_GROUP_NAME', toolkit.config.get('ckan.oauth2.sysadmin_group_name', ''))).strip()
 
         self.redirect_uri = urljoin(urljoin(toolkit.config.get('ckan.site_url', 'http://localhost:5000'), toolkit.config.get('ckan.root_path')), constants.REDIRECT_URL)
 
@@ -91,28 +90,24 @@ class OAuth2Helper(object):
             self.scope = None
 
     def challenge(self, came_from_url):
-        # This function is called by the log in function when the user is not logged in
         state = generate_state(came_from_url)
         oauth = OAuth2Session(self.client_id, redirect_uri=self.redirect_uri, scope=self.scope, state=state)
         auth_url, _ = oauth.authorization_url(self.authorization_endpoint)
         log.debug('Challenge: Redirecting challenge to page {0}'.format(auth_url))
-        # CKAN 2.6 only supports bytes
-        return toolkit.redirect_to(auth_url.encode('utf-8'))
+        return toolkit.redirect_to(auth_url)
 
     def get_token(self):
         oauth = OAuth2Session(self.client_id, redirect_uri=self.redirect_uri, scope=self.scope)
 
-        # Just because of FIWARE Authentication
         headers = {
             'Accept': 'application/json',
             'Content-Type': 'application/x-www-form-urlencoded',
         }
 
         if self.legacy_idm:
-            # This is only required for Keyrock v6 and v5
             headers['Authorization'] = 'Basic %s' % base64.urlsafe_b64encode(
-                '%s:%s' % (self.client_id, self.client_secret)
-            )
+                ('%s:%s' % (self.client_id, self.client_secret)).encode('utf-8')
+            ).decode('utf-8')
 
         try:
             token = oauth.fetch_token(self.token_endpoint,
@@ -121,8 +116,7 @@ class OAuth2Helper(object):
                                       authorization_response=toolkit.request.url,
                                       verify=self.verify_https)
         except requests.exceptions.SSLError as e:
-            # TODO search a better way to detect invalid certificates
-            if "verify failed" in six.text_type(e):
+            if "verify failed" in str(e):
                 raise InsecureTransportError()
             else:
                 raise
@@ -132,9 +126,8 @@ class OAuth2Helper(object):
     def identify(self, token):
 
         if self.jwt_enable:
-
-            access_token = bytes(token['access_token'])
-            user_data = jwt.decode(access_token, verify=False)
+            access_token = token['access_token']
+            user_data = jwt.decode(access_token, options={"verify_signature": False}, algorithms=["HS256", "RS256"])
             user = self.user_json(user_data)
         else:
 
@@ -146,8 +139,7 @@ class OAuth2Helper(object):
                     profile_response = oauth.get(self.profile_api_url, verify=self.verify_https)
 
             except requests.exceptions.SSLError as e:
-                # TODO search a better way to detect invalid certificates
-                if "verify failed" in six.text_type(e):
+                if "verify failed" in str(e):
                     raise InsecureTransportError()
                 else:
                     raise
@@ -219,10 +211,9 @@ class OAuth2Helper(object):
 
     def redirect_from_callback(self):
         '''Redirect to the callback URL after a successful authentication.'''
-        state = toolkit.request.params.get('state')
+        state = toolkit.request.args.get('state')
         came_from = get_came_from(state)
-        toolkit.response.status = 302
-        toolkit.response.location = came_from
+        return toolkit.redirect_to(came_from)
 
     def get_stored_token(self, user_name):
         user_token = db.UserToken.by_user_name(user_name=user_name)
@@ -248,7 +239,7 @@ class OAuth2Helper(object):
         if 'expires_in' in token:
             user_token.expires_in = token['expires_in']
         else:
-            access_token = jwt.decode(user_token.access_token, verify=False)
+            access_token = jwt.decode(user_token.access_token, options={"verify_signature": False}, algorithms=["HS256", "RS256"])
             user_token.expires_in = access_token['exp'] - access_token['iat']
 
         model.Session.add(user_token)
@@ -261,8 +252,7 @@ class OAuth2Helper(object):
             try:
                 token = client.refresh_token(self.token_endpoint, client_secret=self.client_secret, client_id=self.client_id, verify=self.verify_https)
             except requests.exceptions.SSLError as e:
-                # TODO search a better way to detect invalid certificates
-                if "verify failed" in six.text_type(e):
+                if "verify failed" in str(e):
                     raise InsecureTransportError()
                 else:
                     raise
@@ -270,4 +260,4 @@ class OAuth2Helper(object):
             log.info('Token for user %s has been updated properly' % user_name)
             return token
         else:
-            log.warn('User %s has no refresh token' % user_name)
+            log.warning('User %s has no refresh token' % user_name)

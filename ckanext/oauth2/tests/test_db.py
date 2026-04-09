@@ -20,22 +20,26 @@
 import unittest
 import ckanext.oauth2.db as db
 
-from mock import MagicMock
+from unittest.mock import MagicMock
 
 
 class DBTest(unittest.TestCase):
 
     def setUp(self):
-        # Restart databse initial status
+        # Restart database initial status
         db.UserToken = None
 
         # Create mocks
         self._sa = db.sa
         db.sa = MagicMock()
 
+        self._orm = db.orm
+        db.orm = MagicMock()
+
     def tearDown(self):
         db.UserToken = None
         db.sa = self._sa
+        db.orm = self._orm
 
     def test_initdb_not_initialized(self):
 
@@ -55,5 +59,5 @@ class DBTest(unittest.TestCase):
         db.init_db(model)
 
         # Assert that table method has been called
-        self.assertEquals(0, db.sa.Table.call_count)
-        self.assertEquals(0, model.meta.mapper.call_count)
+        self.assertEqual(0, db.sa.Table.call_count)
+        self.assertEqual(0, model.meta.mapper.call_count)

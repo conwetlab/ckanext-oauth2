@@ -18,6 +18,7 @@
 # along with OAuth2 CKAN Extension.  If not, see <http://www.gnu.org/licenses/>.
 
 import sqlalchemy as sa
+import sqlalchemy.orm as orm
 
 UserToken = None
 
@@ -36,14 +37,18 @@ def init_db(model):
         UserToken = _UserToken
 
         user_token_table = sa.Table('user_token', model.meta.metadata,
-            sa.Column('user_name', sa.types.UnicodeText, primary_key=True),
-            sa.Column('access_token', sa.types.UnicodeText),
-            sa.Column('token_type', sa.types.UnicodeText),
-            sa.Column('refresh_token', sa.types.UnicodeText),
-            sa.Column('expires_in', sa.types.UnicodeText)
+            sa.Column('user_name', sa.UnicodeText, primary_key=True),
+            sa.Column('access_token', sa.UnicodeText),
+            sa.Column('token_type', sa.UnicodeText),
+            sa.Column('refresh_token', sa.UnicodeText),
+            sa.Column('expires_in', sa.UnicodeText)
         )
 
         # Create the table only if it does not exist
         user_token_table.create(checkfirst=True)
 
-        model.meta.mapper(UserToken, user_token_table)
+        try:
+            model.meta.mapper(UserToken, user_token_table)
+        except Exception:
+            # In newer SQLAlchemy, use orm.mapper if model.meta.mapper is not available
+            orm.mapper(UserToken, user_token_table)

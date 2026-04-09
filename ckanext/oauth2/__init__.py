@@ -17,5 +17,5 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OAuth2 CKAN Extension.  If not, see <http://www.gnu.org/licenses/>.
 
-__version__ = '0.7.0'
+__version__ = '1.0.0'
 __description__ = 'OAuth2 support for CKAN'

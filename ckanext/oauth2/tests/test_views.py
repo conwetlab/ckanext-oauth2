@@ -22,10 +22,10 @@ from base64 import b64decode, b64encode
 import unittest
 import json
 
-from mock import MagicMock
+from unittest.mock import MagicMock, patch
 from parameterized import parameterized
 
-from ckanext.oauth2 import controller, plugin
+from ckanext.oauth2 import views, plugin
 
 
 RETURNED_STATUS = 302
@@ -47,90 +47,97 @@ class VoidException(Exception):
     pass
 
 
-class OAuth2PluginTest(unittest.TestCase):
+class OAuth2ViewsTest(unittest.TestCase):
 
     def setUp(self):
         # Save the response, the request and the helper functions and mock them
-        self._helpers = controller.helpers
-        controller.helpers = MagicMock()
+        self._helpers = views.helpers
+        views.helpers = MagicMock()
 
-        self._oauth2 = controller.oauth2
-        controller.oauth2 = MagicMock()
+        self._oauth2_module = views.OAuth2Helper
+        views.OAuth2Helper = MagicMock
 
-        self._toolkit_controller = controller.toolkit
+        self._toolkit_views = views.toolkit
         self._toolkit_plugin = plugin.toolkit
-        plugin.toolkit = controller.toolkit = MagicMock()
+        plugin.toolkit = views.toolkit = MagicMock()
 
-        self.__session = controller.session
-        controller.session = MagicMock()
+        self._session = views.session
+        views.session = MagicMock()
 
-        self.controller = controller.OAuth2Controller()
+        self._get_came_from = views.get_came_from
+        self._get_previous_page = views._get_previous_page
 
     def tearDown(self):
-        # Unmock the function
-        controller.helpers = self._helpers
-        controller.oauth2 = self._oauth2
-        controller.toolkit = self._toolkit_controller
-        controller.session = self.__session
+        # Unmock the functions
+        views.helpers = self._helpers
+        views.OAuth2Helper = self._oauth2_module
+        views.toolkit = self._toolkit_views
+        views.session = self._session
+        views.get_came_from = self._get_came_from
+        views._get_previous_page = self._get_previous_page
         plugin.toolkit = self._toolkit_plugin
 
     def generate_state(self, url):
-        return b64encode(bytes(json.dumps({CAME_FROM_FIELD: url})))
+        return b64encode(json.dumps({CAME_FROM_FIELD: url}).encode('utf-8')).decode('utf-8')
 
     def get_came_from(self, state):
+        if isinstance(state, str):
+            state = state.encode('utf-8')
         return json.loads(b64decode(state)).get(CAME_FROM_FIELD, '/')
 
     def test_callback_no_errors(self):
-        oauth2Helper = controller.oauth2.OAuth2Helper.return_value
+        oauth2helper_instance = MagicMock()
+        views.OAuth2Helper = MagicMock(return_value=oauth2helper_instance)
 
         token = 'TOKEN'
         user_id = 'user_id'
-        oauth2Helper.get_token.return_value = token
-        oauth2Helper.identify.return_value = user_id
+        oauth2helper_instance.get_token.return_value = token
+        oauth2helper_instance.identify.return_value = user_id
 
-        # Call the controller
-        self.controller.callback()
+        # Call the view function
+        views.callback()
 
-        oauth2Helper.get_token.assert_called_once()
-        oauth2Helper.identify.assert_called_once_with(token)
-        oauth2Helper.remember.assert_called_once_with(user_id)
-        oauth2Helper.update_token.assert_called_once_with(user_id, token)
-        oauth2Helper.redirect_from_callback.assert_called_once_with()
+        oauth2helper_instance.get_token.assert_called_once()
+        oauth2helper_instance.identify.assert_called_once_with(token)
+        oauth2helper_instance.remember.assert_called_once_with(user_id)
+        oauth2helper_instance.update_token.assert_called_once_with(user_id, token)
+        oauth2helper_instance.redirect_from_callback.assert_called_once_with()
 
     @parameterized.expand([
         (),
         ('/',),
         ('/', CompleteException(EXCEPTION_MSG), None, EXCEPTION_MSG),
-        ('/', CompleteException(), None, CompleteException.description),
+        ('/', CompleteException(), None, str(CompleteException())),
         ('/', ErrorException(EXCEPTION_MSG), None, EXCEPTION_MSG),
-        ('/', ErrorException(), None, ErrorException.error),
+        ('/', ErrorException(), None, str(ErrorException())),
         ('/', VoidException(EXCEPTION_MSG), None, EXCEPTION_MSG),
-        ('/', VoidException(), None, type(VoidException()).__name__),
+        ('/', VoidException(), None, 'VoidException'),
         ('/about', Exception(EXCEPTION_MSG), EXAMPLE_FLASH, EXAMPLE_FLASH)
     ])
     def test_callback_errors(self, came_from=None, exception=Exception(EXCEPTION_MSG),
                                error_description=None, expected_flash=EXCEPTION_MSG):
 
         # Recover function
-        controller.oauth2.get_came_from = self.get_came_from
+        views.get_came_from = self.get_came_from
 
-        oauth2Helper = controller.oauth2.OAuth2Helper.return_value
-        oauth2Helper.get_token.side_effect = exception
+        oauth2helper_instance = MagicMock()
+        views.OAuth2Helper = MagicMock(return_value=oauth2helper_instance)
+        oauth2helper_instance.get_token.side_effect = exception
 
-        controller.toolkit.request.GET = {}
-        controller.toolkit.request.GET['state'] = self.generate_state(came_from)
+        args_dict = {}
+        args_dict['state'] = self.generate_state(came_from)
         if error_description is not None:
-            controller.toolkit.request.GET['error_description'] = error_description
-        controller.toolkit.request.params.get = controller.toolkit.request.GET.get
+            args_dict['error_description'] = error_description
 
-        # Call the controller
-        self.controller.callback()
+        views.toolkit.request.args = MagicMock()
+        views.toolkit.request.args.get = lambda key, default='': args_dict.get(key, default)
 
-        # Check the state and the location
-        controller.session.save.assert_called_once_with()
-        self.assertEquals(RETURNED_STATUS, controller.toolkit.response.status_int)
-        self.assertEquals(came_from, controller.toolkit.response.location)
-        controller.helpers.flash_error.assert_called_once_with(expected_flash)
+        # Call the view function
+        views.callback()
+
+        # Check the state
+        views.session.save.assert_called_once_with()
+        views.helpers.flash_error.assert_called_once_with(expected_flash)
 
     @parameterized.expand([
         (),
@@ -147,17 +154,22 @@ class OAuth2PluginTest(unittest.TestCase):
     ])
     def test_login(self, referer=None, came_from=None, expected_referer='/dashboard'):
 
+        oauth2helper_instance = MagicMock()
+        views.OAuth2Helper = MagicMock(return_value=oauth2helper_instance)
+
         # The login function will check these variables
-        controller.toolkit.request.headers = {}
-        controller.toolkit.request.params = {}
+        views.toolkit.request.headers = {}
+        views.toolkit.request.args = {}
 
         if referer:
-            controller.toolkit.request.headers['Referer'] = referer
+            views.toolkit.request.headers['Referer'] = referer
 
         if came_from:
-            controller.toolkit.request.params['came_from'] = came_from
+            views.toolkit.request.args = {'came_from': came_from}
+
+        views._get_previous_page = lambda default: plugin._get_previous_page(default)
 
         # Call the function
-        self.controller.login()
+        views.login()
 
-        self.controller.oauth2helper.challenge.assert_called_once_with(expected_referer)
+        oauth2helper_instance.challenge.assert_called_once_with(expected_referer)
